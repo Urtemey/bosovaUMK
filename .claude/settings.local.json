@@ -46,7 +46,10 @@
       "Bash(../.venv/Scripts/python.exe seed_from_html.py)",
       "Bash(../.venv/Scripts/python.exe -c \":*)",
       "Bash(xargs grep:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(gh api:*)",
+      "Bash(curl -sL \"https://raw.githubusercontent.com/anthropics/claude-cookbooks/main/coding/prompting_for_frontend_aesthetics.ipynb\")"
     ]
   }
 }
