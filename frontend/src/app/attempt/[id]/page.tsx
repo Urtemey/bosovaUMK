@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { attemptsApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -31,17 +31,18 @@ function formatTime(seconds: number) {
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 }
 
-/* ─── Q-nav button ──────────────────────────────────────────── */
+/* ─── Q-nav button (compact) ─────────────────────────────────── */
 interface QBtnProps {
   num: number;
   current: boolean;
   saved: boolean;
   hasAnswer: boolean;
   onClick: () => void;
+  compact?: boolean;
 }
 
-function QBtn({ num, current, saved, hasAnswer, onClick }: QBtnProps) {
-  let cls = 'q-btn';
+function QBtn({ num, current, saved, hasAnswer, onClick, compact }: QBtnProps) {
+  let cls = compact ? 'q-map-btn' : 'q-btn';
   if (current) cls += ' current';
   else if (saved) cls += ' saved';
   else if (hasAnswer) cls += ' answered';
@@ -56,6 +57,67 @@ function QBtn({ num, current, saved, hasAnswer, onClick }: QBtnProps) {
     >
       {num}
     </button>
+  );
+}
+
+/* ─── Question Map Overlay ───────────────────────────────────── */
+interface QMapProps {
+  questions: Question[];
+  currentIdx: number;
+  savedQuestions: Set<number>;
+  answers: Record<number, unknown>;
+  onSelect: (idx: number) => void;
+  onClose: () => void;
+}
+
+function QuestionMap({ questions, currentIdx, savedQuestions, answers, onSelect, onClose }: QMapProps) {
+  const savedCount = questions.filter(q => savedQuestions.has(q.id)).length;
+  const answeredCount = questions.filter(q => answers[q.id] !== undefined).length;
+
+  return (
+    <div className="q-map-overlay" onClick={onClose}>
+      <div className="q-map-panel animate-scale-in" onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+          <h3 className="t-subtitle" style={{ margin: 0 }}>Карта вопросов</h3>
+          <button type="button" onClick={onClose} className="btn btn-ghost btn-sm" aria-label="Закрыть">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Legend */}
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem', fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            <span style={{ width: 10, height: 10, borderRadius: 3, background: 'var(--color-ok)', display: 'inline-block' }} />
+            Подтверждено ({savedCount})
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            <span style={{ width: 10, height: 10, borderRadius: 3, background: 'var(--color-accent-muted)', display: 'inline-block' }} />
+            С ответом ({answeredCount - savedCount})
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            <span style={{ width: 10, height: 10, borderRadius: 3, background: 'var(--color-surface-3)', border: '1px solid var(--color-border)', display: 'inline-block' }} />
+            Без ответа
+          </span>
+        </div>
+
+        {/* Grid */}
+        <div className="q-map-grid">
+          {questions.map((q, i) => (
+            <QBtn
+              key={q.id}
+              num={i + 1}
+              current={i === currentIdx}
+              saved={savedQuestions.has(q.id)}
+              hasAnswer={answers[q.id] !== undefined}
+              onClick={() => { onSelect(i); onClose(); }}
+              compact
+            />
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -74,6 +136,11 @@ export default function AttemptPage() {
   const [saving, setSaving] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [saveError, setSaveError] = useState('');
+  const [showMap, setShowMap] = useState(false);
+  const questionAreaRef = useRef<HTMLDivElement>(null);
+
+  // Threshold: use grid sidebar for >=15 questions
+  const isLargeTest = questions.length >= 15;
 
   useEffect(() => {
     async function load() {
@@ -109,6 +176,30 @@ export default function AttemptPage() {
     }, 1000);
     return () => clearInterval(interval);
   }, [attempt]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      // Don't intercept if user is typing in an input
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        setCurrentIdx(prev => Math.max(0, prev - 1));
+      } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        setCurrentIdx(prev => Math.min(questions.length - 1, prev + 1));
+      } else if (e.key === 'm' || e.key === 'M' || e.key === 'ь' || e.key === 'Ь') {
+        e.preventDefault();
+        setShowMap(prev => !prev);
+      } else if (e.key === 'Escape' && showMap) {
+        setShowMap(false);
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [questions.length, showMap]);
 
   const currentQuestion = questions[currentIdx];
 
@@ -209,6 +300,18 @@ export default function AttemptPage() {
         background: 'var(--color-surface-2)',
       }}
     >
+      {/* ── Question Map Overlay ─────────────────────────────── */}
+      {showMap && (
+        <QuestionMap
+          questions={questions}
+          currentIdx={currentIdx}
+          savedQuestions={savedQuestions}
+          answers={answers}
+          onSelect={setCurrentIdx}
+          onClose={() => setShowMap(false)}
+        />
+      )}
+
       {/* ── Fixed top progress bar ─────────────────────────── */}
       <div
         style={{
@@ -232,13 +335,29 @@ export default function AttemptPage() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            gap: '1rem',
+            gap: '0.75rem',
           }}
         >
           <span className="t-caption">
-            Подтверждено: <strong style={{ color: 'var(--color-text-primary)' }}>{savedCount}</strong>
+            <strong style={{ color: 'var(--color-text-primary)' }}>{savedCount}</strong>
             <span style={{ color: 'var(--color-text-muted)' }}> / {totalCount}</span>
           </span>
+
+          {/* Map toggle button */}
+          <button
+            type="button"
+            onClick={() => setShowMap(true)}
+            className="btn btn-ghost btn-sm"
+            style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', gap: '0.25rem' }}
+            title="Карта вопросов (M)"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" />
+            </svg>
+            <span className="hidden sm:inline">Карта</span>
+            <span className="kbd hidden sm:inline" style={{ marginLeft: '0.125rem' }}>M</span>
+          </button>
 
           {/* Timer */}
           <div
@@ -282,29 +401,46 @@ export default function AttemptPage() {
         <aside
           className="hidden sm:block"
           style={{
-            width: '3.25rem',
+            width: isLargeTest ? '11rem' : '3.25rem',
             flexShrink: 0,
             position: 'sticky',
             top: 120,
           }}
           aria-label="Навигация по вопросам"
         >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-            {questions.map((q, i) => (
-              <QBtn
-                key={q.id}
-                num={i + 1}
-                current={i === currentIdx}
-                saved={savedQuestions.has(q.id)}
-                hasAnswer={answers[q.id] !== undefined}
-                onClick={() => setCurrentIdx(i)}
-              />
-            ))}
-          </div>
+          {isLargeTest ? (
+            /* Grid layout for large tests */
+            <div className="q-nav-grid">
+              {questions.map((q, i) => (
+                <QBtn
+                  key={q.id}
+                  num={i + 1}
+                  current={i === currentIdx}
+                  saved={savedQuestions.has(q.id)}
+                  hasAnswer={answers[q.id] !== undefined}
+                  onClick={() => setCurrentIdx(i)}
+                />
+              ))}
+            </div>
+          ) : (
+            /* Single column for small tests */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+              {questions.map((q, i) => (
+                <QBtn
+                  key={q.id}
+                  num={i + 1}
+                  current={i === currentIdx}
+                  saved={savedQuestions.has(q.id)}
+                  hasAnswer={answers[q.id] !== undefined}
+                  onClick={() => setCurrentIdx(i)}
+                />
+              ))}
+            </div>
+          )}
         </aside>
 
         {/* Question area */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div ref={questionAreaRef} style={{ flex: 1, minWidth: 0 }}>
           {/* Question header */}
           <div style={{ marginBottom: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
             <span
@@ -331,44 +467,29 @@ export default function AttemptPage() {
 
           {/* Save error */}
           {saveError && (
-            <div
-              role="alert"
-              style={{
-                marginTop: '0.75rem',
-                padding: '0.625rem 0.875rem',
-                background: 'var(--color-danger-bg)',
-                border: '1px solid #fecaca',
-                borderRadius: '6px',
-                fontSize: '0.875rem',
-                color: 'var(--color-danger)',
-              }}
-            >
+            <div className="alert alert-error" style={{ marginTop: '0.75rem' }}>
               {saveError}
             </div>
           )}
 
-          {/* Mobile Q-nav horizontal scroll */}
+          {/* Mobile Q-nav — horizontal scroll for small, grid for large */}
           <div
             className="sm:hidden"
-            style={{
-              marginTop: '1rem',
-              overflowX: 'auto',
-              display: 'flex',
-              gap: '0.375rem',
-              paddingBottom: '0.25rem',
-            }}
+            style={{ marginTop: '1rem' }}
             aria-label="Навигация по вопросам"
           >
-            {questions.map((q, i) => (
-              <QBtn
-                key={q.id}
-                num={i + 1}
-                current={i === currentIdx}
-                saved={savedQuestions.has(q.id)}
-                hasAnswer={answers[q.id] !== undefined}
-                onClick={() => setCurrentIdx(i)}
-              />
-            ))}
+            <div className={isLargeTest ? 'q-nav-grid' : 'q-nav-scroll'}>
+              {questions.map((q, i) => (
+                <QBtn
+                  key={q.id}
+                  num={i + 1}
+                  current={i === currentIdx}
+                  saved={savedQuestions.has(q.id)}
+                  hasAnswer={answers[q.id] !== undefined}
+                  onClick={() => setCurrentIdx(i)}
+                />
+              ))}
+            </div>
           </div>
 
           {/* Action bar */}
@@ -383,14 +504,17 @@ export default function AttemptPage() {
             }}
           >
             {/* Prev / Next */}
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
               <button
                 type="button"
                 onClick={() => setCurrentIdx(Math.max(0, currentIdx - 1))}
                 disabled={currentIdx === 0}
                 className="btn btn-secondary btn-sm"
               >
-                ← Назад
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M15 18l-6-6 6-6" />
+                </svg>
+                Назад
               </button>
               <button
                 type="button"
@@ -398,8 +522,19 @@ export default function AttemptPage() {
                 disabled={currentIdx === totalCount - 1}
                 className="btn btn-secondary btn-sm"
               >
-                Далее →
+                Далее
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 18l6-6-6-6" />
+                </svg>
               </button>
+              <span className="kbd hidden sm:inline" title="Стрелки для навигации">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M15 18l-6-6 6-6" />
+                </svg>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 18l6-6-6-6" />
+                </svg>
+              </span>
             </div>
 
             {/* Save / Finish */}
@@ -441,8 +576,7 @@ export default function AttemptPage() {
                   type="button"
                   onClick={handleFinish}
                   disabled={submitting}
-                  className="btn btn-primary btn-sm"
-                  style={{ background: 'var(--color-ok)' }}
+                  className="btn btn-cta btn-sm"
                 >
                   {submitting ? (
                     <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>

@@ -54,13 +54,13 @@ function Logo() {
         style={{
           width: 32,
           height: 32,
-          background: 'linear-gradient(135deg, #0f766e, #14b8a6)',
+          background: 'linear-gradient(135deg, #2b4c7e, #3d6ba8)',
           borderRadius: 8,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0,
-          boxShadow: '0 2px 8px rgba(15, 118, 110, 0.2)',
+          boxShadow: '0 2px 8px rgba(43, 76, 126, 0.25)',
         }}
       >
         <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

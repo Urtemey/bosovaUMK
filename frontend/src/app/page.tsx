@@ -16,23 +16,23 @@ interface Test {
 const GRADES = [5, 6, 7, 8, 9, 10, 11];
 
 const GRADE_BG: Record<number, string> = {
-  5: '#f0fdfa',
-  6: '#f0f9ff',
-  7: '#f5f3ff',
-  8: '#fff7ed',
-  9: '#ecfdf5',
-  10: '#fff1f2',
-  11: '#fdf4ff',
+  5: '#edf2f9',
+  6: '#eef4fb',
+  7: '#f3eff9',
+  8: '#fef6ee',
+  9: '#edf9f3',
+  10: '#fdf0f2',
+  11: '#f5eef8',
 };
 
 const GRADE_COLOR: Record<number, string> = {
-  5: '#0d9488',
-  6: '#0284c7',
-  7: '#7c3aed',
-  8: '#ea580c',
-  9: '#059669',
-  10: '#e11d48',
-  11: '#c026d3',
+  5: '#2b4c7e',
+  6: '#3b7cc1',
+  7: '#7c54c4',
+  8: '#c87533',
+  9: '#2b9e6b',
+  10: '#c44b5c',
+  11: '#9b45b5',
 };
 
 const GRADE_LABELS: Record<number, string> = {
@@ -95,7 +95,7 @@ function pluralQ(n: number) {
 
 function TestCard({ test, index }: { test: Test; index: number }) {
   const bg = GRADE_BG[test.grade] ?? '#f0fdfa';
-  const color = GRADE_COLOR[test.grade] ?? '#0d9488';
+  const color = GRADE_COLOR[test.grade] ?? '#2b4c7e';
 
   return (
     <Link
@@ -211,7 +211,7 @@ export default function HomePage() {
   }, []);
 
   const tests = testsByGrade[selectedGrade] || [];
-  const gradeColor = GRADE_COLOR[selectedGrade] ?? '#0d9488';
+  const gradeColor = GRADE_COLOR[selectedGrade] ?? '#2b4c7e';
 
   return (
     <>
@@ -230,7 +230,7 @@ export default function HomePage() {
           <div className="geo-shape geo-shape-rect" style={{ top: '1.5rem', right: '4%', width: 220, height: 220 }} />
           <div className="geo-shape geo-shape-circle" style={{ bottom: '0.5rem', right: '14%', width: 110, height: 110 }} />
           <div className="geo-shape geo-shape-diamond" style={{ top: '35%', right: '7%', width: 56, height: 56, background: 'rgba(255,255,255,0.03)' }} />
-          <div className="geo-shape geo-shape-circle" style={{ top: '15%', right: '28%', width: 32, height: 32, borderColor: 'rgba(245,158,11,0.15)' }} />
+          <div className="geo-shape geo-shape-circle" style={{ top: '15%', right: '28%', width: 32, height: 32, borderColor: 'rgba(200,117,51,0.15)' }} />
 
           <div style={{ maxWidth: '38rem', position: 'relative', zIndex: 1 }}>
             <p className="hero-eyebrow animate-fade-up stagger-1">

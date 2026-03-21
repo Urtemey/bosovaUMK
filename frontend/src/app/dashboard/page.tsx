@@ -16,23 +16,23 @@ interface Test {
 }
 
 const GRADE_BG: Record<number, string> = {
-  5: '#f0fdfa',
-  6: '#f0f9ff',
-  7: '#f5f3ff',
-  8: '#fff7ed',
-  9: '#ecfdf5',
-  10: '#fff1f2',
-  11: '#fdf4ff',
+  5: '#edf2f9',
+  6: '#eef4fb',
+  7: '#f3eff9',
+  8: '#fef6ee',
+  9: '#edf9f3',
+  10: '#fdf0f2',
+  11: '#f5eef8',
 };
 
 const GRADE_COLOR: Record<number, string> = {
-  5: '#0d9488',
-  6: '#0284c7',
-  7: '#7c3aed',
-  8: '#ea580c',
-  9: '#059669',
-  10: '#e11d48',
-  11: '#c026d3',
+  5: '#2b4c7e',
+  6: '#3b7cc1',
+  7: '#7c54c4',
+  8: '#c87533',
+  9: '#2b9e6b',
+  10: '#c44b5c',
+  11: '#9b45b5',
 };
 
 function pluralQuestions(n: number) {
@@ -43,7 +43,7 @@ function pluralQuestions(n: number) {
 
 function DashboardTestCard({ test, index }: { test: Test; index: number }) {
   const bg = GRADE_BG[test.grade] ?? '#f0fdfa';
-  const color = GRADE_COLOR[test.grade] ?? '#0d9488';
+  const color = GRADE_COLOR[test.grade] ?? '#2b4c7e';
 
   return (
     <Link

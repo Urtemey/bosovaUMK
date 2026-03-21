@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Nunito, Outfit } from "next/font/google";
+import { Nunito, Bitter } from "next/font/google";
 import "./globals.css";
 import AuthProvider from "@/components/layout/AuthProvider";
 import Header from "@/components/layout/Header";
@@ -7,16 +7,16 @@ import { ToastProvider } from "@/components/ui/Toast";
 
 const nunito = Nunito({
   subsets: ["latin", "cyrillic"],
-  variable: "--font-nunito",
+  variable: "--font-body",
   display: "swap",
   weight: ["400", "500", "600", "700", "800"],
 });
 
-const outfit = Outfit({
-  subsets: ["latin"],
+const bitter = Bitter({
+  subsets: ["latin", "cyrillic"],
   variable: "--font-display",
   display: "swap",
-  weight: ["600", "700", "800", "900"],
+  weight: ["400", "500", "600", "700", "800"],
 });
 
 export const viewport: Viewport = {
@@ -40,7 +40,7 @@ export default function RootLayout({
       <head>
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
       </head>
-      <body className={`${nunito.variable} ${outfit.variable} font-sans antialiased`}>
+      <body className={`${nunito.variable} ${bitter.variable} font-sans antialiased`}>
         <AuthProvider>
           <ToastProvider>
             <Header />

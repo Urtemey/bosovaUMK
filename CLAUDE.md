@@ -171,18 +171,20 @@ Interpret creatively and make unexpected choices that feel genuinely designed fo
 </frontend_aesthetics>
 
 ### Контекст проекта для дизайна
-Эстетика «Warm Editorial» — вдохновлена японским стационарным дизайном + современный editorial. Тёплые кремовые фоны, глубокий teal как доминант, amber для CTA.
+Эстетика «Scholarly Blue» — академическая, тёплая. Вдохновлена библиотечной эстетикой + editorial design. Тёплые пергаментные фоны, глубокий sapphire blue как доминант, burnished copper для CTA.
 
-### Шрифт
-**Nunito** (Google Fonts) — округлённый, дружелюбный, идеально для образования. НЕ Inter, НЕ Roboto.
+### Шрифты
+- **Nunito** (body, `--font-body`) — округлённый, дружелюбный, идеально для образования
+- **Bitter** (display, `--font-display`) — slab-serif, академический характер, для заголовков
+- НЕ Inter, НЕ Roboto, НЕ Space Grotesk
 
 ### CSS Variables (globals.css)
-- Accent: `--color-accent` (#0f766e deep teal), `--color-accent-hover` (#0d9488)
-- Amber CTA: `--color-amber` (#f59e0b), `.btn-cta` использует amber
-- Surfaces: `--color-surface` (#fff), `--color-surface-2` (#fefcf9 warm cream), `--color-surface-3` (#f5f0eb)
-- Text: `--color-text-primary` (#1a1a2e rich ink), `--color-text-secondary`, `--color-text-muted`
-- Semantic: `--color-ok` (green), `--color-warn` (amber), `--color-danger` (red)
-- Per-grade: `--color-g5` (#0d9488) через `--color-g11` (#c026d3) — warm rainbow
+- Accent: `--color-accent` (#2b4c7e deep sapphire blue), `--color-accent-hover` (#3d6ba8)
+- Copper CTA: `--color-amber` (#c87533), `.btn-cta` использует copper
+- Surfaces: `--color-surface` (#fff), `--color-surface-2` (#f8f5ef warm parchment), `--color-surface-3` (#ede8e0)
+- Text: `--color-text-primary` (#1a1f25 rich ink), `--color-text-secondary` (#4a5260), `--color-text-muted` (#8a9099)
+- Semantic: `--color-ok` (#2b8a55), `--color-warn` (#c07b22), `--color-danger` (#c44133)
+- Per-grade: `--color-g5` (#2b8a55) через `--color-g11` (#9b45b5) — sophisticated palette
 
 ### Анимации
 - `.animate-fade-up` — staggered reveal при загрузке (с `.stagger-1` … `.stagger-8`)
@@ -193,19 +195,31 @@ Interpret creatively and make unexpected choices that feel genuinely designed fo
 - Кнопки: active scale(0.97), hover translateY(-1px)
 
 ### Фоны
-- `.hero-banner` — teal gradient + dot grid pattern overlay + geometric shapes
-- `.page-bg` — radial gradients (teal + amber) на warm cream
+- `.hero-banner` — forest green gradient + dot grid pattern overlay + geometric shapes
+- `.page-bg` — radial gradients (green + copper) на warm parchment
+- `.login-bg` — ruled notebook grid pattern
 
 ### CSS-классы компонентов
 - `.card`, `.card-lg` — карточки с тёплыми тенями
 - `.btn`, `.btn-primary`, `.btn-secondary`, `.btn-ghost`, `.btn-danger`, `.btn-cta`, `.btn-sm`, `.btn-lg` — кнопки
-- `.input`, `.input-mono`, `.label` — формы
+- `.input`, `.input-mono`, `.label` — формы с custom checkbox/radio
 - `.t-display`, `.t-title`, `.t-subtitle`, `.t-body`, `.t-caption`, `.t-label` — типографика
 - `.grade-strip`, `.grade-5`…`.grade-11` — акцентные полоски классов
 - `.answer-option`, `.answer-option.selected` — варианты ответов с hover translateX(4px)
 - `.journal-table`, `.score-badge`, `.score-high/med/low` — журнал
-- `.q-btn`, `.q-btn.current/saved/answered` — навигация по вопросам с hover scale(1.08)
+- `.q-btn`, `.q-btn.current/saved/answered` — навигация по вопросам
+- `.q-nav-grid`, `.q-nav-scroll` — сетка/скролл для большого числа вопросов
+- `.q-map-overlay`, `.q-map-panel`, `.q-map-grid`, `.q-map-btn` — overlay карта вопросов
+- `.kbd` — клавиатурные подсказки
 - `.tab-bar`, `.tab-btn` — вкладки
+- `.back-btn` — кнопка возврата
+- `.section-header`, `.section-bar` — заголовки секций
+- `.card-grid` — сетка карточек
+- `.empty-state` — пустое состояние
+- `.alert`, `.alert-error`, `.alert-info` — алерты
+- `.icon-badge`, `.icon-badge-teal`, `.icon-badge-green` — иконки-бейджи
+- `.modal-backdrop` — фон модалки
+- `.stat-tile`, `.stat-tile-value`, `.stat-tile-label` — плитки статистики
 - `.spinner`, `.progress-bar`, `.skeleton` — индикаторы
 
 ## Журнал учителя
