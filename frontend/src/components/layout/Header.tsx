@@ -45,35 +45,39 @@ function IconLogin({ active }: { active: boolean }) {
   );
 }
 
-/* ─── Logo icon ───────────────────────────────────────────── */
+/* ─── Logo ───────────────────────────────────────────────── */
 
-function LogoIcon({ size = 32 }: { size?: number }) {
+function Logo() {
   return (
-    <div
-      style={{
-        width: size,
-        height: size,
-        background: 'linear-gradient(135deg, #5b21b6, #2563eb)',
-        borderRadius: Math.round(size * 0.25),
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexShrink: 0,
-      }}
-    >
-      <svg
-        width={size * 0.55}
-        height={size * 0.55}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="white"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      <div
+        style={{
+          width: 32,
+          height: 32,
+          background: 'linear-gradient(135deg, #0f766e, #14b8a6)',
+          borderRadius: 8,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+          boxShadow: '0 2px 8px rgba(15, 118, 110, 0.2)',
+        }}
       >
-        <rect x="2" y="3" width="20" height="14" rx="2" />
-        <path d="M8 21h8M12 17v4" />
-      </svg>
+        <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8M12 17v4" />
+        </svg>
+      </div>
+      <span
+        style={{
+          fontFamily: 'var(--font-display), var(--font-sans), system-ui, sans-serif',
+          fontWeight: 800,
+          fontSize: '1.0625rem',
+          color: 'var(--color-text-primary)',
+          letterSpacing: '-0.025em',
+        }}
+      >
+        УМК Информатика
+      </span>
     </div>
   );
 }
@@ -100,12 +104,13 @@ export default function Header() {
           position: 'sticky',
           top: 0,
           zIndex: 50,
-          background: 'var(--color-surface)',
+          background: 'rgba(255, 255, 255, 0.85)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
           borderBottom: '1px solid var(--color-border)',
-          boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
           display: 'none',
         }}
-        className="sm-header"
+        className="sm-header animate-slide-down"
       >
         <div
           style={{
@@ -124,21 +129,11 @@ export default function Header() {
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '0.5rem',
               textDecoration: 'none',
               flexShrink: 0,
             }}
           >
-            <span
-              style={{
-                fontWeight: 800,
-                fontSize: '1.0625rem',
-                color: 'var(--color-text-primary)',
-                letterSpacing: '-0.01em',
-              }}
-            >
-              УМК Информатика
-            </span>
+            <Logo />
           </Link>
 
           {/* Nav links */}
@@ -147,7 +142,7 @@ export default function Header() {
               href="/"
               className={`nav-link ${pathname === '/' ? 'active' : ''}`}
             >
-              Тесты
+              Каталог
             </Link>
 
             {user && role === 'teacher' && (
@@ -185,6 +180,7 @@ export default function Header() {
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
+                    fontWeight: 600,
                   }}
                 >
                   {user.display_name}
@@ -217,7 +213,9 @@ export default function Header() {
           position: 'sticky',
           top: 0,
           zIndex: 50,
-          background: 'var(--color-surface)',
+          background: 'rgba(255, 255, 255, 0.9)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
           borderBottom: '1px solid var(--color-border)',
         }}
         className="mobile-header"
@@ -233,17 +231,9 @@ export default function Header() {
         >
           <Link
             href="/"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}
+            style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}
           >
-            <span
-              style={{
-                fontWeight: 800,
-                fontSize: '1rem',
-                color: 'var(--color-text-primary)',
-              }}
-            >
-              УМК Информатика
-            </span>
+            <Logo />
           </Link>
 
           {!user && (
@@ -275,6 +265,7 @@ export default function Header() {
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
+                  fontWeight: 600,
                 }}
               >
                 {user.display_name}
@@ -303,7 +294,7 @@ export default function Header() {
           className={`bottom-nav-item ${pathname === '/' ? 'active' : ''}`}
         >
           <IconHome active={pathname === '/'} />
-          <span>Тесты</span>
+          <span>Каталог</span>
         </Link>
 
         {user && role === 'teacher' ? (

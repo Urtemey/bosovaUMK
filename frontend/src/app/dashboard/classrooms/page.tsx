@@ -23,7 +23,7 @@ function pluralStudents(n: number) {
 const gradeVar = (g: number) => `var(--color-g${g})`;
 
 export default function ClassroomsPage() {
-  const { token, role } = useAuth();
+  const { token, role, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const { showToast } = useToast();
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
@@ -35,13 +35,14 @@ export default function ClassroomsPage() {
   const [createError, setCreateError] = useState('');
 
   useEffect(() => {
+    if (authLoading) return;
     if (!token || role !== 'teacher') {
       router.push('/login');
       return;
     }
     loadClassrooms();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, role, router]);
+  }, [token, role, router, authLoading]);
 
   async function loadClassrooms() {
     try {
@@ -73,189 +74,190 @@ export default function ClassroomsPage() {
   }
 
   return (
-    <div style={{ maxWidth: '44rem', margin: '0 auto', padding: '1.5rem 1rem 2.5rem' }}>
-      {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'space-between',
-          gap: '1rem',
-          marginBottom: '1.75rem',
-          flexWrap: 'wrap',
-        }}
-      >
-        <div>
-          <h1 className="t-display" style={{ fontSize: 'clamp(1.5rem, 3vw, 2rem)', marginBottom: '0.25rem' }}>
-            Мои классы
-          </h1>
-          <p className="t-caption">Управление классами и учениками</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => { setShowCreate(!showCreate); setCreateError(''); }}
-          className={showCreate ? 'btn btn-secondary btn-sm' : 'btn btn-primary btn-sm'}
-        >
-          {showCreate ? 'Отмена' : '+ Создать класс'}
-        </button>
-      </div>
-
-      {/* Create form */}
-      {showCreate && (
-        <div className="card-lg" style={{ padding: '1.25rem', marginBottom: '1.25rem' }}>
-          <h2 className="t-subtitle" style={{ marginBottom: '1rem' }}>Новый класс</h2>
-          <form onSubmit={handleCreate}>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr auto auto',
-                gap: '0.625rem',
-                alignItems: 'flex-end',
-              }}
-            >
-              <div>
-                <label className="label" htmlFor="className">Название</label>
-                <input
-                  id="className"
-                  type="text"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  placeholder="5А"
-                  className="input"
-                  required
-                  autoFocus
-                />
-              </div>
-              <div>
-                <label className="label" htmlFor="classGrade">Класс</label>
-                <select
-                  id="classGrade"
-                  value={newGrade}
-                  onChange={(e) => setNewGrade(Number(e.target.value))}
-                  className="input"
-                  style={{ width: 'auto', paddingRight: '2rem' }}
-                >
-                  {[5, 6, 7, 8, 9, 10, 11].map(g => (
-                    <option key={g} value={g}>{g}</option>
-                  ))}
-                </select>
-              </div>
-              <button
-                type="submit"
-                disabled={creating}
-                className="btn btn-primary"
-                style={{ alignSelf: 'flex-end' }}
-              >
-                {creating ? (
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                    <span className="spinner" style={{ width: 14, height: 14, borderWidth: 2, borderColor: 'rgba(255,255,255,0.4)', borderTopColor: '#fff' }} />
-                  </span>
-                ) : 'Создать'}
-              </button>
-            </div>
-            {createError && (
-              <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: 'var(--color-danger)' }}>
-                {createError}
-              </p>
-            )}
-          </form>
-        </div>
-      )}
-
-      {/* List */}
-      {loading ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          {[1, 2, 3].map(i => (
-            <div key={i} style={{ height: 68, background: 'var(--color-surface-3)', borderRadius: 8 }} />
-          ))}
-        </div>
-      ) : classrooms.length === 0 ? (
+    <div className="page-bg" style={{ minHeight: 'calc(100vh - 60px)' }}>
+      <div style={{ maxWidth: '44rem', margin: '0 auto', padding: '1.5rem 1rem 2.5rem' }}>
+        {/* Header */}
         <div
+          className="animate-fade-up"
           style={{
-            padding: '4rem 1rem',
-            textAlign: 'center',
-            border: '1px dashed var(--color-border-strong)',
-            borderRadius: '12px',
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            gap: '1rem',
+            marginBottom: '1.75rem',
+            flexWrap: 'wrap',
           }}
         >
-          <p className="t-subtitle" style={{ marginBottom: '0.5rem', color: 'var(--color-text-muted)' }}>
-            Классов пока нет
-          </p>
-          <p className="t-caption">Создайте первый класс, чтобы добавлять учеников</p>
+          <div>
+            <h1 className="t-display" style={{ fontSize: 'clamp(1.375rem, 3vw, 1.75rem)', marginBottom: '0.25rem' }}>
+              Мои классы
+            </h1>
+            <p className="t-caption">Управление классами и учениками</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => { setShowCreate(!showCreate); setCreateError(''); }}
+            className={showCreate ? 'btn btn-secondary btn-sm' : 'btn btn-primary btn-sm'}
+          >
+            {showCreate ? 'Отмена' : '+ Создать класс'}
+          </button>
         </div>
-      ) : (
-        <div
-          className="card-lg"
-          style={{ overflow: 'hidden' }}
-          role="list"
-          aria-label="Список классов"
-        >
-          {classrooms.map((classroom, idx) => (
-            <Link
-              key={classroom.id}
-              href={`/classroom/${classroom.id}`}
-              role="listitem"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '1rem',
-                padding: '0.875rem 1.125rem',
-                borderBottom: idx < classrooms.length - 1 ? '1px solid var(--color-border)' : 'none',
-                textDecoration: 'none',
-                transition: 'background 0.12s',
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLAnchorElement).style.background = 'var(--color-surface-2)';
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLAnchorElement).style.background = 'transparent';
-              }}
-            >
-              {/* Grade badge */}
+
+        {/* Create form */}
+        {showCreate && (
+          <div className="card-lg animate-slide-down" style={{ padding: '1.25rem', marginBottom: '1.25rem' }}>
+            <h2 className="t-subtitle" style={{ marginBottom: '1rem' }}>Новый класс</h2>
+            <form onSubmit={handleCreate}>
               <div
                 style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: '8px',
-                  background: 'var(--color-surface-2)',
-                  border: `2px solid ${gradeVar(classroom.grade)}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '1rem',
-                  fontWeight: 800,
-                  color: gradeVar(classroom.grade),
-                  flexShrink: 0,
+                  display: 'grid',
+                  gridTemplateColumns: '1fr auto auto',
+                  gap: '0.625rem',
+                  alignItems: 'flex-end',
                 }}
               >
-                {classroom.grade}
+                <div>
+                  <label className="label" htmlFor="className">Название</label>
+                  <input
+                    id="className"
+                    type="text"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    placeholder="5А"
+                    className="input"
+                    required
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label className="label" htmlFor="classGrade">Класс</label>
+                  <select
+                    id="classGrade"
+                    value={newGrade}
+                    onChange={(e) => setNewGrade(Number(e.target.value))}
+                    className="input"
+                    style={{ width: 'auto', paddingRight: '2rem' }}
+                  >
+                    {[5, 6, 7, 8, 9, 10, 11].map(g => (
+                      <option key={g} value={g}>{g}</option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  type="submit"
+                  disabled={creating}
+                  className="btn btn-primary"
+                  style={{ alignSelf: 'flex-end' }}
+                >
+                  {creating ? (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                      <span className="spinner" style={{ width: 14, height: 14, borderWidth: 2, borderColor: 'rgba(255,255,255,0.4)', borderTopColor: '#fff' }} />
+                    </span>
+                  ) : 'Создать'}
+                </button>
               </div>
-
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontWeight: 600, fontSize: '0.9375rem', color: 'var(--color-text-primary)', marginBottom: '0.125rem' }}>
-                  {classroom.name}
+              {createError && (
+                <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: 'var(--color-danger)', fontWeight: 500 }}>
+                  {createError}
                 </p>
-                <p className="t-caption">{pluralStudents(classroom.student_count)}</p>
-              </div>
+              )}
+            </form>
+          </div>
+        )}
 
-              {/* Chevron */}
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="var(--color-text-muted)"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
+        {/* List */}
+        {loading ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {[1, 2, 3].map(i => (
+              <div key={i} className="skeleton" style={{ height: 68 }} />
+            ))}
+          </div>
+        ) : classrooms.length === 0 ? (
+          <div className="empty-state animate-scale-in">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto 0.75rem', opacity: 0.5 }}>
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+            </svg>
+            <p className="t-subtitle" style={{ marginBottom: '0.375rem', color: 'var(--color-text-muted)' }}>
+              Классов пока нет
+            </p>
+            <p className="t-caption">Создайте первый класс, чтобы добавлять учеников</p>
+          </div>
+        ) : (
+          <div
+            className="card-lg"
+            style={{ overflow: 'hidden' }}
+            role="list"
+            aria-label="Список классов"
+          >
+            {classrooms.map((classroom, idx) => (
+              <Link
+                key={classroom.id}
+                href={`/classroom/${classroom.id}`}
+                role="listitem"
+                className="animate-fade-up"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '1rem',
+                  padding: '0.875rem 1.125rem',
+                  borderBottom: idx < classrooms.length - 1 ? '1px solid var(--color-border)' : 'none',
+                  textDecoration: 'none',
+                  transition: 'background 0.15s',
+                  animationDelay: `${0.05 * idx}s`,
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLAnchorElement).style.background = 'var(--color-accent-light)';
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLAnchorElement).style.background = 'transparent';
+                }}
               >
-                <path d="M9 18l6-6-6-6" />
-              </svg>
-            </Link>
-          ))}
-        </div>
-      )}
+                {/* Grade badge */}
+                <div
+                  style={{
+                    width: 42,
+                    height: 42,
+                    borderRadius: '10px',
+                    background: 'var(--color-surface-3)',
+                    border: `2px solid ${gradeVar(classroom.grade)}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '1rem',
+                    fontWeight: 800,
+                    color: gradeVar(classroom.grade),
+                    flexShrink: 0,
+                  }}
+                >
+                  {classroom.grade}
+                </div>
+
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontWeight: 700, fontSize: '0.9375rem', color: 'var(--color-text-primary)', marginBottom: '0.125rem' }}>
+                    {classroom.name}
+                  </p>
+                  <p className="t-caption">{pluralStudents(classroom.student_count)}</p>
+                </div>
+
+                {/* Chevron */}
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="var(--color-text-muted)"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M9 18l6-6-6-6" />
+                </svg>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -61,22 +61,7 @@ export default function ImportPage() {
   return (
     <div style={{ maxWidth: '36rem', margin: '0 auto', padding: '1.5rem 1rem 3rem' }}>
       {/* Back */}
-      <button
-        type="button"
-        onClick={() => router.push('/dashboard')}
-        className="t-caption"
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '0.25rem',
-          marginBottom: '1.25rem',
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          padding: 0,
-          color: 'var(--color-text-muted)',
-        }}
-      >
+      <button type="button" onClick={() => router.push('/dashboard')} className="back-btn">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M19 12H5M12 19l-7-7 7-7" />
         </svg>

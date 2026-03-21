@@ -16,23 +16,23 @@ interface Test {
 }
 
 const GRADE_BG: Record<number, string> = {
-  5: '#eff6ff',
-  6: '#ecfeff',
+  5: '#f0fdfa',
+  6: '#f0f9ff',
   7: '#f5f3ff',
   8: '#fff7ed',
-  9: '#f0fdf4',
-  10: '#fef2f2',
+  9: '#ecfdf5',
+  10: '#fff1f2',
   11: '#fdf4ff',
 };
 
 const GRADE_COLOR: Record<number, string> = {
-  5: '#2563eb',
-  6: '#0891b2',
+  5: '#0d9488',
+  6: '#0284c7',
   7: '#7c3aed',
-  8: '#d97706',
+  8: '#ea580c',
   9: '#059669',
-  10: '#dc2626',
-  11: '#db2777',
+  10: '#e11d48',
+  11: '#c026d3',
 };
 
 function pluralQuestions(n: number) {
@@ -41,25 +41,26 @@ function pluralQuestions(n: number) {
   return `${n} вопросов`;
 }
 
-/* ─── Dashboard test card ───────────────────────────────────── */
-
-function DashboardTestCard({ test }: { test: Test }) {
-  const bg = GRADE_BG[test.grade] ?? '#eff6ff';
-  const color = GRADE_COLOR[test.grade] ?? '#2563eb';
+function DashboardTestCard({ test, index }: { test: Test; index: number }) {
+  const bg = GRADE_BG[test.grade] ?? '#f0fdfa';
+  const color = GRADE_COLOR[test.grade] ?? '#0d9488';
 
   return (
-    <Link href={`/test/${test.id}`} className="test-card">
-      {/* Coloured top */}
+    <Link
+      href={`/test/${test.id}`}
+      className="test-card animate-fade-up"
+      style={{ animationDelay: `${0.04 * Math.min(index, 10)}s` }}
+    >
       <div className="test-card-top" style={{ background: bg }}>
         <span
           style={{
             position: 'absolute',
             right: '0.875rem',
             bottom: '-0.375rem',
-            fontSize: '3.75rem',
+            fontSize: '3.5rem',
             fontWeight: 900,
             color,
-            opacity: 0.1,
+            opacity: 0.07,
             lineHeight: 1,
             pointerEvents: 'none',
             userSelect: 'none',
@@ -67,35 +68,23 @@ function DashboardTestCard({ test }: { test: Test }) {
         >
           {test.grade}
         </span>
-        <svg
-          width="38"
-          height="38"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke={color}
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
+        <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
           <rect x="4" y="3" width="16" height="18" rx="2" />
           <path d="M8 7h8M8 11h8M8 15h5" />
         </svg>
       </div>
 
-      {/* Body */}
       <div className="test-card-body">
         <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
           <span className="pill-tag pill-tag-blue">{test.grade} класс</span>
-          <span
-            className={`pill-tag ${test.is_published ? 'pill-tag-green' : 'pill-tag-muted'}`}
-          >
+          <span className={`pill-tag ${test.is_published ? 'pill-tag-green' : 'pill-tag-muted'}`}>
             {test.is_published ? 'Опубликован' : 'Черновик'}
           </span>
         </div>
         <h3
           style={{
             fontSize: '0.9375rem',
-            fontWeight: 600,
+            fontWeight: 700,
             lineHeight: 1.4,
             color: 'var(--color-text-primary)',
             marginTop: '0.125rem',
@@ -108,24 +97,15 @@ function DashboardTestCard({ test }: { test: Test }) {
           {test.title}
         </h3>
         {test.topic && (
-          <p
-            style={{
-              fontSize: '0.8125rem',
-              color: 'var(--color-text-muted)',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
+          <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {test.topic}
           </p>
         )}
       </div>
 
-      {/* Footer */}
       <div className="test-card-footer">
         <span>{pluralQuestions(test.question_count)}</span>
-        <span style={{ marginLeft: 'auto', color: 'var(--color-accent)', fontWeight: 500 }}>
+        <span style={{ marginLeft: 'auto', color: 'var(--color-accent)', fontWeight: 600 }}>
           Открыть →
         </span>
       </div>
@@ -133,36 +113,33 @@ function DashboardTestCard({ test }: { test: Test }) {
   );
 }
 
-/* ─── Skeleton card ─────────────────────────────────────────── */
-
 function SkeletonCard() {
   return (
     <div className="test-card" style={{ pointerEvents: 'none' }}>
-      <div style={{ height: 80, background: 'var(--color-surface-3)' }} />
+      <div className="skeleton" style={{ height: 84, borderRadius: 0 }} />
       <div className="test-card-body">
         <div style={{ display: 'flex', gap: '0.375rem' }}>
-          <div style={{ width: 60, height: 20, background: 'var(--color-surface-3)', borderRadius: 999 }} />
-          <div style={{ width: 80, height: 20, background: 'var(--color-surface-3)', borderRadius: 999 }} />
+          <div className="skeleton" style={{ width: 60, height: 20, borderRadius: 999 }} />
+          <div className="skeleton" style={{ width: 80, height: 20, borderRadius: 999 }} />
         </div>
-        <div style={{ height: 13, width: '85%', background: 'var(--color-surface-3)', borderRadius: 4, marginTop: 8 }} />
-        <div style={{ height: 11, width: '60%', background: 'var(--color-surface-3)', borderRadius: 4 }} />
+        <div className="skeleton" style={{ height: 14, width: '85%', marginTop: 8 }} />
+        <div className="skeleton" style={{ height: 11, width: '60%' }} />
       </div>
       <div className="test-card-footer" style={{ borderTop: '1px solid var(--color-border)' }}>
-        <div style={{ height: 10, width: 80, background: 'var(--color-surface-3)', borderRadius: 4 }} />
+        <div className="skeleton" style={{ height: 10, width: 80 }} />
       </div>
     </div>
   );
 }
 
-/* ─── Page ──────────────────────────────────────────────────── */
-
 export default function DashboardPage() {
-  const { token, role, user } = useAuth();
+  const { token, role, user, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const [tests, setTests] = useState<Test[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!token || role !== 'teacher') {
       router.push('/login');
       return;
@@ -178,7 +155,7 @@ export default function DashboardPage() {
       }
     }
     load();
-  }, [token, role, router]);
+  }, [token, role, router, authLoading]);
 
   const grouped = tests.reduce(
     (acc, t) => {
@@ -188,6 +165,8 @@ export default function DashboardPage() {
     },
     {} as Record<number, Test[]>,
   );
+
+  let cardIndex = 0;
 
   return (
     <>
@@ -199,70 +178,21 @@ export default function DashboardPage() {
             margin: '0 auto',
             padding: '2.5rem 1.5rem 3rem',
             position: 'relative',
-            overflow: 'hidden',
+            zIndex: 1,
           }}
         >
-          {/* Decorative */}
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              right: '4rem',
-              width: 220,
-              height: 220,
-              borderRadius: '50%',
-              background: 'rgba(255,255,255,0.04)',
-              pointerEvents: 'none',
-            }}
-          />
-          <div
-            style={{
-              position: 'absolute',
-              bottom: '-2rem',
-              right: '10rem',
-              width: 140,
-              height: 140,
-              borderRadius: '50%',
-              background: 'rgba(255,255,255,0.05)',
-              pointerEvents: 'none',
-            }}
-          />
+          <div className="geo-shape geo-shape-rect" style={{ top: '0.5rem', right: '4%', width: 180, height: 180 }} />
+          <div className="geo-shape geo-shape-circle" style={{ bottom: '-1.5rem', right: '12%', width: 100, height: 100 }} />
 
           <div style={{ position: 'relative', zIndex: 1 }}>
-            <p
-              style={{
-                fontSize: '0.8125rem',
-                color: 'rgba(255,255,255,0.6)',
-                fontWeight: 600,
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                marginBottom: '0.375rem',
-              }}
-            >
-              Панель учителя
-            </p>
-            <h1
-              style={{
-                fontSize: 'clamp(1.5rem, 3.5vw, 2.25rem)',
-                fontWeight: 800,
-                color: '#fff',
-                lineHeight: 1.2,
-                marginBottom: '0.625rem',
-                letterSpacing: '-0.02em',
-              }}
-            >
+            <p className="hero-eyebrow animate-fade-up stagger-1">Панель учителя</p>
+            <h1 className="hero-title animate-fade-up stagger-2" style={{ fontSize: 'clamp(1.5rem, 4vw, 2.5rem)' }}>
               Добро пожаловать{user ? `, ${user.display_name}` : ''}!
             </h1>
-            <p
-              style={{
-                fontSize: '1rem',
-                color: 'rgba(255,255,255,0.75)',
-                marginBottom: '1.625rem',
-              }}
-            >
+            <p className="hero-subtitle animate-fade-up stagger-3" style={{ marginBottom: '1.625rem' }}>
               Создавайте тесты, управляйте классами и отслеживайте успеваемость учеников
             </p>
-            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <div className="animate-fade-up stagger-4" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
               <Link href="/dashboard/tests/new" className="btn btn-lg btn-cta">
                 + Создать тест
               </Link>
@@ -278,37 +208,25 @@ export default function DashboardPage() {
       </section>
 
       {/* ── Tests section ────────────────────────────────── */}
-      <div style={{ background: 'var(--color-surface-2)' }}>
-        <div
-          style={{
-            maxWidth: '75rem',
-            margin: '0 auto',
-            padding: '2rem 1.5rem 3.5rem',
-          }}
-        >
+      <div className="page-bg">
+        <div style={{ maxWidth: '75rem', margin: '0 auto', padding: '2rem 1.5rem 3.5rem' }}>
           <div
+            className="animate-fade-up"
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              marginBottom: '1.5rem',
+              marginBottom: '1.75rem',
               flexWrap: 'wrap',
               gap: '0.75rem',
             }}
           >
             <div>
-              <h2
-                style={{
-                  fontSize: '1.375rem',
-                  fontWeight: 700,
-                  color: 'var(--color-text-primary)',
-                  letterSpacing: '-0.01em',
-                }}
-              >
+              <h2 className="t-display" style={{ fontSize: 'clamp(1.25rem, 2.5vw, 1.5rem)', marginBottom: '0.125rem' }}>
                 Мои тесты
               </h2>
               {!loading && (
-                <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', marginTop: '0.125rem' }}>
+                <p className="t-caption">
                   {tests.length} {tests.length === 1 ? 'тест' : tests.length < 5 ? 'теста' : 'тестов'}
                 </p>
               )}
@@ -322,37 +240,15 @@ export default function DashboardPage() {
             <div>
               {[1, 2].map((i) => (
                 <div key={i} style={{ marginBottom: '2rem' }}>
-                  <div
-                    style={{
-                      width: 80,
-                      height: 14,
-                      background: 'var(--color-surface-3)',
-                      borderRadius: 4,
-                      marginBottom: '0.875rem',
-                    }}
-                  />
-                  <div
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-                      gap: '1rem',
-                    }}
-                  >
+                  <div className="skeleton" style={{ width: 80, height: 14, marginBottom: '0.875rem' }} />
+                  <div className="card-grid">
                     {[1, 2, 3].map((j) => <SkeletonCard key={j} />)}
                   </div>
                 </div>
               ))}
             </div>
           ) : tests.length === 0 ? (
-            <div
-              style={{
-                padding: '4rem 1rem',
-                textAlign: 'center',
-                background: 'var(--color-surface)',
-                border: '1px dashed var(--color-border-strong)',
-                borderRadius: '14px',
-              }}
-            >
+            <div className="empty-state animate-scale-in">
               <svg
                 width="48"
                 height="48"
@@ -362,91 +258,41 @@ export default function DashboardPage() {
                 strokeWidth="1.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                style={{ margin: '0 auto 1rem' }}
+                style={{ margin: '0 auto 1rem', opacity: 0.6 }}
               >
                 <rect x="4" y="3" width="16" height="18" rx="2" />
                 <path d="M8 7h8M8 11h8M8 15h5" />
               </svg>
-              <p
-                style={{
-                  fontSize: '1rem',
-                  fontWeight: 600,
-                  color: 'var(--color-text-secondary)',
-                  marginBottom: '0.375rem',
-                }}
-              >
+              <p style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-text-secondary)', marginBottom: '0.375rem' }}>
                 Тестов пока нет
               </p>
-              <p
-                style={{
-                  fontSize: '0.9375rem',
-                  color: 'var(--color-text-muted)',
-                  marginBottom: '1.25rem',
-                }}
-              >
+              <p style={{ fontSize: '0.9375rem', color: 'var(--color-text-muted)', marginBottom: '1.25rem' }}>
                 Создайте первый тест и выдайте его классу
               </p>
-              <Link
-                href="/dashboard/tests/new"
-                className="btn btn-primary"
-                style={{ display: 'inline-flex' }}
-              >
+              <Link href="/dashboard/tests/new" className="btn btn-primary" style={{ display: 'inline-flex' }}>
                 + Создать тест
               </Link>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2.25rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
               {Object.entries(grouped)
                 .sort(([a], [b]) => Number(a) - Number(b))
                 .map(([grade, gradeTests]) => (
                   <section key={grade}>
-                    {/* Grade label */}
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        marginBottom: '0.875rem',
-                      }}
-                    >
-                      <span
-                        style={{
-                          width: 4,
-                          height: 20,
-                          background: GRADE_COLOR[Number(grade)] ?? 'var(--color-accent)',
-                          borderRadius: 2,
-                          flexShrink: 0,
-                        }}
-                      />
-                      <h3
-                        style={{
-                          fontSize: '1rem',
-                          fontWeight: 700,
-                          color: 'var(--color-text-primary)',
-                        }}
-                      >
+                    <div className="section-header animate-fade-up">
+                      <span className="section-bar" style={{ background: GRADE_COLOR[Number(grade)] ?? 'var(--color-accent)' }} />
+                      <h3 style={{ fontSize: '1.0625rem', fontWeight: 800, color: 'var(--color-text-primary)' }}>
                         {grade} класс
                       </h3>
-                      <span style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
+                      <span className="t-caption">
                         {gradeTests.length}{' '}
-                        {gradeTests.length === 1
-                          ? 'тест'
-                          : gradeTests.length < 5
-                          ? 'теста'
-                          : 'тестов'}
+                        {gradeTests.length === 1 ? 'тест' : gradeTests.length < 5 ? 'теста' : 'тестов'}
                       </span>
                     </div>
 
-                    {/* Cards */}
-                    <div
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-                        gap: '1rem',
-                      }}
-                    >
+                    <div className="card-grid">
                       {gradeTests.map((test) => (
-                        <DashboardTestCard key={test.id} test={test} />
+                        <DashboardTestCard key={test.id} test={test} index={cardIndex++} />
                       ))}
                     </div>
                   </section>

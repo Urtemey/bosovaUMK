@@ -29,7 +29,7 @@ export default function LoginPage() {
         res = await authApi.login({ login, password }) as Record<string, unknown>;
       }
       const teacher = res.teacher as { id: number; login: string; display_name: string };
-      auth.login(res.access_token as string, teacher, 'teacher');
+      auth.login(res.access_token as string, (res.refresh_token as string) || null, teacher, 'teacher');
       router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Произошла ошибка');
@@ -40,6 +40,7 @@ export default function LoginPage() {
 
   return (
     <div
+      className="login-bg"
       style={{
         minHeight: 'calc(100vh - 56px)',
         display: 'flex',
@@ -48,12 +49,10 @@ export default function LoginPage() {
         padding: '1.5rem 1rem',
       }}
     >
-      <div style={{ width: '100%', maxWidth: '22rem' }}>
-        {/* Back link */}
+      <div className="animate-scale-in" style={{ width: '100%', maxWidth: '22rem' }}>
         <Link
           href="/"
-          className="t-caption"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', marginBottom: '1.5rem', textDecoration: 'none', color: 'var(--color-text-muted)' }}
+          className="back-btn"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M19 12H5M12 19l-7-7 7-7" />
@@ -62,26 +61,14 @@ export default function LoginPage() {
         </Link>
 
         <div className="card-lg" style={{ padding: '2rem 1.75rem' }}>
-          {/* Header */}
           <div style={{ marginBottom: '1.75rem' }}>
-            <div
-              style={{
-                width: 40,
-                height: 40,
-                background: 'var(--color-accent)',
-                borderRadius: 8,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: '1rem',
-              }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <div className="icon-badge icon-badge-teal" style={{ marginBottom: '1rem' }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
                 <circle cx="12" cy="7" r="4" />
               </svg>
             </div>
-            <h1 className="t-title" style={{ marginBottom: '0.25rem' }}>
+            <h1 className="t-title" style={{ marginBottom: '0.3rem' }}>
               {isRegister ? 'Регистрация' : 'Вход для учителя'}
             </h1>
             <p className="t-caption">
@@ -91,10 +78,9 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {/* Form */}
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {isRegister && (
-              <div>
+              <div className="animate-fade-up">
                 <label className="label" htmlFor="displayName">Имя</label>
                 <input
                   id="displayName"
@@ -139,17 +125,7 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <div
-                role="alert"
-                style={{
-                  padding: '0.625rem 0.875rem',
-                  background: 'var(--color-danger-bg)',
-                  border: '1px solid #fecaca',
-                  borderRadius: '6px',
-                  fontSize: '0.875rem',
-                  color: 'var(--color-danger)',
-                }}
-              >
+              <div role="alert" className="alert alert-error animate-fade-up">
                 {error}
               </div>
             )}
@@ -169,7 +145,6 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Toggle register/login */}
           <div style={{ marginTop: '1.25rem', textAlign: 'center' }}>
             <button
               type="button"
@@ -181,6 +156,7 @@ export default function LoginPage() {
                 border: 'none',
                 cursor: 'pointer',
                 padding: 0,
+                fontWeight: 600,
               }}
             >
               {isRegister ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Зарегистрироваться'}
@@ -188,12 +164,11 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Student login link */}
         <p className="t-caption" style={{ textAlign: 'center', marginTop: '1.25rem' }}>
           Ученик?{' '}
           <Link
             href="/student-login"
-            style={{ color: 'var(--color-accent)', textDecoration: 'none' }}
+            style={{ color: 'var(--color-accent)', textDecoration: 'none', fontWeight: 600 }}
           >
             Войти как ученик
           </Link>

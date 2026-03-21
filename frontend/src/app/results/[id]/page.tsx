@@ -116,24 +116,9 @@ export default function ResultsPage() {
   const offset = circumference * (1 - score / 100);
 
   return (
-    <div style={{ maxWidth: '44rem', margin: '0 auto', padding: '1.5rem 1rem 3rem' }}>
+    <div className="page-bg animate-fade-up" style={{ maxWidth: '44rem', margin: '0 auto', padding: '1.5rem 1rem 3rem' }}>
       {/* Back */}
-      <button
-        type="button"
-        onClick={() => router.push('/')}
-        className="t-caption"
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '0.25rem',
-          marginBottom: '1.25rem',
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          padding: 0,
-          color: 'var(--color-text-muted)',
-        }}
-      >
+      <button type="button" onClick={() => router.push('/')} className="back-btn">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M19 12H5M12 19l-7-7 7-7" />
         </svg>

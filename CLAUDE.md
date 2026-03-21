@@ -150,37 +150,63 @@ GET    /api/attempts/journal/:classroomId  # Журнал класса
 
 ## Дизайн-система
 
-### Философия дизайна
-Ориентир — **Яндекс Учебник**: чистый, светлый интерфейс с карточками, минималистичная навигация, pill-кнопки для выбора класса, цветные метки-теги. Но цветовая палитра — **своя** (синий accent #2563eb).
+<frontend_aesthetics>
+You tend to converge toward generic, "on distribution" outputs. In frontend design, this creates what users call the "AI slop" aesthetic. Avoid this: make creative, distinctive frontends that surprise and delight. Focus on:
 
-### Ключевые паттерны из Яндекс Учебника для нашей реализации:
-- **Навигация:** фиксированный header с логотипом, навигацией и кнопками входа. На мобильных — bottom tab bar
-- **Каталог:** pill-кнопки выбора класса (5-11), карточки тестов с цветными акцентами
-- **Карточки:** белый фон, скругленные углы (10-14px), тонкая рамка, цветная полоска слева для обозначения класса
-- **Типографика:** чёткая иерархия — display, title, subtitle, body, caption, label
-- **Кнопки:** primary (синий), secondary (рамка), ghost (прозрачный), danger
-- **Формы:** скруглённые inputs с focus ring
-- **Журнал:** таблица с цветовыми бейджами (зелёный >70%, жёлтый 40-70%, красный <40%)
-- **Скелетоны:** placeholder-блоки при загрузке
+Typography: Choose fonts that are beautiful, unique, and interesting. Avoid generic fonts like Arial and Inter; opt instead for distinctive choices that elevate the frontend's aesthetics.
+
+Color & Theme: Commit to a cohesive aesthetic. Use CSS variables for consistency. Dominant colors with sharp accents outperform timid, evenly-distributed palettes. Draw from IDE themes and cultural aesthetics for inspiration.
+
+Motion: Use animations for effects and micro-interactions. Prioritize CSS-only solutions for HTML. Use Motion library for React when available. Focus on high-impact moments: one well-orchestrated page load with staggered reveals (animation-delay) creates more delight than scattered micro-interactions.
+
+Backgrounds: Create atmosphere and depth rather than defaulting to solid colors. Layer CSS gradients, use geometric patterns, or add contextual effects that match the overall aesthetic.
+
+Avoid generic AI-generated aesthetics:
+- Overused font families (Inter, Roboto, Arial, system fonts)
+- Clichéd color schemes (particularly purple gradients on white backgrounds)
+- Predictable layouts and component patterns
+- Cookie-cutter design that lacks context-specific character
+
+Interpret creatively and make unexpected choices that feel genuinely designed for the context. Vary between light and dark themes, different fonts, different aesthetics. You still tend to converge on common choices (Space Grotesk, for example) across generations. Avoid this: it is critical that you think outside the box!
+</frontend_aesthetics>
+
+### Контекст проекта для дизайна
+Эстетика «Warm Editorial» — вдохновлена японским стационарным дизайном + современный editorial. Тёплые кремовые фоны, глубокий teal как доминант, amber для CTA.
+
+### Шрифт
+**Nunito** (Google Fonts) — округлённый, дружелюбный, идеально для образования. НЕ Inter, НЕ Roboto.
 
 ### CSS Variables (globals.css)
-- Accent: `--color-accent` (#2563eb синий)
-- Surfaces: `--color-surface` (белый), `--color-surface-2` (серо-голубой фон), `--color-surface-3`
-- Text: `--color-text-primary`, `--color-text-secondary`, `--color-text-muted`
-- Semantic: `--color-ok` (зелёный), `--color-warn` (жёлтый), `--color-danger` (красный)
-- Per-grade: `--color-g5` через `--color-g11` — цветные полоски для каждого класса
+- Accent: `--color-accent` (#0f766e deep teal), `--color-accent-hover` (#0d9488)
+- Amber CTA: `--color-amber` (#f59e0b), `.btn-cta` использует amber
+- Surfaces: `--color-surface` (#fff), `--color-surface-2` (#fefcf9 warm cream), `--color-surface-3` (#f5f0eb)
+- Text: `--color-text-primary` (#1a1a2e rich ink), `--color-text-secondary`, `--color-text-muted`
+- Semantic: `--color-ok` (green), `--color-warn` (amber), `--color-danger` (red)
+- Per-grade: `--color-g5` (#0d9488) через `--color-g11` (#c026d3) — warm rainbow
+
+### Анимации
+- `.animate-fade-up` — staggered reveal при загрузке (с `.stagger-1` … `.stagger-8`)
+- `.animate-scale-in` — для модалок и форм
+- `.animate-slide-down` — для dropdown и создания
+- `.skeleton` — shimmer анимация при загрузке
+- Карточки: hover translateY(-4px) + shadow lift
+- Кнопки: active scale(0.97), hover translateY(-1px)
+
+### Фоны
+- `.hero-banner` — teal gradient + dot grid pattern overlay + geometric shapes
+- `.page-bg` — radial gradients (teal + amber) на warm cream
 
 ### CSS-классы компонентов
-- `.card`, `.card-lg` — карточки
-- `.btn`, `.btn-primary`, `.btn-secondary`, `.btn-ghost`, `.btn-danger`, `.btn-sm`, `.btn-lg` — кнопки
+- `.card`, `.card-lg` — карточки с тёплыми тенями
+- `.btn`, `.btn-primary`, `.btn-secondary`, `.btn-ghost`, `.btn-danger`, `.btn-cta`, `.btn-sm`, `.btn-lg` — кнопки
 - `.input`, `.input-mono`, `.label` — формы
 - `.t-display`, `.t-title`, `.t-subtitle`, `.t-body`, `.t-caption`, `.t-label` — типографика
 - `.grade-strip`, `.grade-5`…`.grade-11` — акцентные полоски классов
-- `.answer-option`, `.answer-option.selected` — варианты ответов
+- `.answer-option`, `.answer-option.selected` — варианты ответов с hover translateX(4px)
 - `.journal-table`, `.score-badge`, `.score-high/med/low` — журнал
-- `.q-btn`, `.q-btn.current/saved/answered` — навигация по вопросам
+- `.q-btn`, `.q-btn.current/saved/answered` — навигация по вопросам с hover scale(1.08)
 - `.tab-bar`, `.tab-btn` — вкладки
-- `.spinner`, `.progress-bar` — индикаторы
+- `.spinner`, `.progress-bar`, `.skeleton` — индикаторы
 
 ## Журнал учителя
 Табличный вид: строки — ученики, столбцы — тесты. В ячейках: время/результат%. Столбец "Средняя" — средний балл ученика.

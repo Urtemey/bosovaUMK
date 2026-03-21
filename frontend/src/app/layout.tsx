@@ -1,14 +1,22 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Nunito, Outfit } from "next/font/google";
 import "./globals.css";
 import AuthProvider from "@/components/layout/AuthProvider";
 import Header from "@/components/layout/Header";
 import { ToastProvider } from "@/components/ui/Toast";
 
-const inter = Inter({
+const nunito = Nunito({
   subsets: ["latin", "cyrillic"],
-  variable: "--font-inter",
+  variable: "--font-nunito",
   display: "swap",
+  weight: ["400", "500", "600", "700", "800"],
+});
+
+const outfit = Outfit({
+  subsets: ["latin"],
+  variable: "--font-display",
+  display: "swap",
+  weight: ["600", "700", "800", "900"],
 });
 
 export const viewport: Viewport = {
@@ -18,7 +26,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "УМК Информатика — Тестирование по информатике",
+  title: "boZoVa — Тестирование по информатике",
   description: "Платформа тестирования по информатике (УМК Босова) для 5–11 классов",
 };
 
@@ -32,7 +40,7 @@ export default function RootLayout({
       <head>
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
       </head>
-      <body className={`${inter.variable} font-sans antialiased`} style={{ backgroundColor: 'var(--color-surface-2)', color: 'var(--color-text-primary)' }}>
+      <body className={`${nunito.variable} ${outfit.variable} font-sans antialiased`}>
         <AuthProvider>
           <ToastProvider>
             <Header />

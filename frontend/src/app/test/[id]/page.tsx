@@ -44,19 +44,9 @@ function pluralQuestions(n: number) {
 /* ─── Stat tile ─────────────────────────────────────────────── */
 function StatTile({ value, label }: { value: string | number; label: string }) {
   return (
-    <div
-      style={{
-        padding: '0.75rem 1rem',
-        background: 'var(--color-surface-2)',
-        border: '1px solid var(--color-border)',
-        borderRadius: '8px',
-        textAlign: 'center',
-      }}
-    >
-      <div style={{ fontSize: '1.375rem', fontWeight: 700, color: 'var(--color-text-primary)', lineHeight: 1.2 }}>
-        {value}
-      </div>
-      <div className="t-caption" style={{ marginTop: '0.25rem' }}>{label}</div>
+    <div className="stat-tile">
+      <div className="stat-tile-value">{value}</div>
+      <div className="stat-tile-label">{label}</div>
     </div>
   );
 }
@@ -149,16 +139,7 @@ function AssignModal({
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 100,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'rgba(0,0,0,0.45)',
-        padding: '1rem',
-      }}
+      className="modal-backdrop"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
@@ -456,24 +437,9 @@ export default function TestViewPage() {
   const gradeVar = `var(--color-g${test.grade})`;
 
   return (
-    <div style={{ maxWidth: '48rem', margin: '0 auto', padding: '1.5rem 1rem 2.5rem' }}>
+    <div className="page-bg animate-fade-up" style={{ maxWidth: '48rem', margin: '0 auto', padding: '1.5rem 1rem 2.5rem' }}>
       {/* Back */}
-      <button
-        type="button"
-        onClick={() => router.back()}
-        className="t-caption"
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '0.25rem',
-          marginBottom: '1.25rem',
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          padding: 0,
-          color: 'var(--color-text-muted)',
-        }}
-      >
+      <button type="button" onClick={() => router.back()} className="back-btn">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M19 12H5M12 19l-7-7 7-7" />
         </svg>
@@ -501,7 +467,7 @@ export default function TestViewPage() {
             </>
           )}
         </div>
-        <h1 className="t-display" style={{ fontSize: 'clamp(1.375rem, 3vw, 1.75rem)' }}>{test.title}</h1>
+        <h1 className="t-display" style={{ fontSize: 'clamp(1.375rem, 3.5vw, 1.875rem)' }}>{test.title}</h1>
         {test.description && (
           <p className="t-body" style={{ marginTop: '0.5rem' }}>{test.description}</p>
         )}
@@ -524,17 +490,10 @@ export default function TestViewPage() {
 
       {/* Teacher note */}
       {role === 'teacher' && (
-        <div
-          style={{
-            padding: '0.75rem 1rem',
-            background: 'var(--color-warn-bg)',
-            border: '1px solid var(--color-accent-muted)',
-            borderRadius: '8px',
-            fontSize: '0.875rem',
-            color: 'var(--color-warn)',
-            marginBottom: '1.5rem',
-          }}
-        >
+        <div className="alert alert-info" style={{ marginBottom: '1.5rem' }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+            <circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" />
+          </svg>
           Вы просматриваете тест как учитель. Ученики увидят только вопросы без правильных ответов.
         </div>
       )}

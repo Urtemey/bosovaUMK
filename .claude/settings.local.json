@@ -49,7 +49,8 @@
       "Bash(grep:*)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(gh api:*)",
-      "Bash(curl -sL \"https://raw.githubusercontent.com/anthropics/claude-cookbooks/main/coding/prompting_for_frontend_aesthetics.ipynb\")"
+      "Bash(curl -sL \"https://raw.githubusercontent.com/anthropics/claude-cookbooks/main/coding/prompting_for_frontend_aesthetics.ipynb\")",
+      "Bash(npx next:*)"
     ]
   }
 }

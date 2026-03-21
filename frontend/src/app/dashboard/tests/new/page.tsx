@@ -6,7 +6,7 @@ import { testsApi } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 
 export default function NewTestPage() {
-  const { token, role } = useAuth();
+  const { token, role, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
   const [mounted, setMounted] = useState(false);
@@ -27,7 +27,7 @@ export default function NewTestPage() {
   const [error, setError] = useState('');
 
   useEffect(() => { setMounted(true); }, []);
-  if (!mounted) return null;
+  if (!mounted || authLoading) return null;
 
   if (!token || role !== 'teacher') {
     router.push('/login');
@@ -63,29 +63,14 @@ export default function NewTestPage() {
   return (
     <div style={{ maxWidth: '40rem', margin: '0 auto', padding: '1.5rem 1rem 2.5rem' }}>
       {/* Back */}
-      <button
-        type="button"
-        onClick={() => router.push('/dashboard')}
-        className="t-caption"
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '0.25rem',
-          marginBottom: '1.25rem',
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          padding: 0,
-          color: 'var(--color-text-muted)',
-        }}
-      >
+      <button type="button" onClick={() => router.push('/dashboard')} className="back-btn">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M19 12H5M12 19l-7-7 7-7" />
         </svg>
         Мои тесты
       </button>
 
-      <h1 className="t-display" style={{ fontSize: 'clamp(1.5rem, 3vw, 2rem)', marginBottom: '1.5rem' }}>
+      <h1 className="t-display" style={{ fontSize: 'clamp(1.375rem, 3vw, 1.75rem)', marginBottom: '1.5rem' }}>
         Новый тест
       </h1>
 

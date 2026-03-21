@@ -61,12 +61,13 @@ function truncate(str: string, max: number) {
 export default function TestStatsPage() {
   const { id, testId } = useParams();
   const router = useRouter();
-  const { token, role } = useAuth();
+  const { token, role, isLoading: authLoading } = useAuth();
   const [data, setData] = useState<StatsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
+    if (authLoading) return;
     if (!token || role !== 'teacher') {
       router.push('/login');
       return;
@@ -82,7 +83,7 @@ export default function TestStatsPage() {
       }
     }
     load();
-  }, [id, testId, token, role, router]);
+  }, [id, testId, token, role, router, authLoading]);
 
   if (loading) {
     return (
@@ -112,22 +113,7 @@ export default function TestStatsPage() {
   return (
     <div style={{ maxWidth: '60rem', margin: '0 auto', padding: '1.5rem 1rem 3rem' }}>
       {/* Back */}
-      <button
-        type="button"
-        onClick={() => router.push(`/classroom/${id}`)}
-        className="t-caption"
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '0.25rem',
-          marginBottom: '1.25rem',
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          padding: 0,
-          color: 'var(--color-text-muted)',
-        }}
-      >
+      <button type="button" onClick={() => router.push(`/classroom/${id}`)} className="back-btn">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M19 12H5M12 19l-7-7 7-7" />
         </svg>
