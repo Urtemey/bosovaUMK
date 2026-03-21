@@ -1,0 +1,23 @@
+Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+forward-logs-shared.ts:95 [HMR] connected
+forward-logs-shared.ts:95 [Fast Refresh] rebuilding
+forward-logs-shared.ts:95 [Fast Refresh] done in 189ms
+forward-logs-shared.ts:95 Detected `scroll-behavior: smooth` on the `<html>` element. To disable smooth scrolling during route transitions, add `data-scroll-behavior="smooth"` to your <html> element. Learn more: https://nextjs.org/docs/messages/missing-data-scroll-behavior
+warn @ forward-logs-shared.ts:95
+:5000/api/tests/my:1  Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
+intercept-console-error.ts:42 Error: HTTP 401
+    at apiFetch (api.ts:23:11)
+    at async load (page.tsx:172:23)
+error @ intercept-console-error.ts:42
+forward-logs-shared.ts:95 [Fast Refresh] rebuilding
+forward-logs-shared.ts:95 [Fast Refresh] done in 120ms
+:5000/api/tests/my:1  Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
+intercept-console-error.ts:42 Error: HTTP 401
+    at apiFetch (api.ts:23:11)
+    at async load (page.tsx:172:23)
+error @ intercept-console-error.ts:42
+forward-logs-shared.ts:95 [Fast Refresh] rebuilding
+forward-logs-shared.ts:95 [Fast Refresh] done in 1222ms
+forward-logs-shared.ts:95 [Fast Refresh] rebuilding
+forward-logs-shared.ts:95 [Fast Refresh] done in 128ms
+:5000/api/tests/import-html:1  Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
