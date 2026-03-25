@@ -18,6 +18,8 @@ def check_answer(question_type, student_answer, correct_answer):
         QuestionType.MATCHING: _check_matching,
         QuestionType.DRAG_DROP: _check_drag_drop,
         QuestionType.SELECT_LIST: _check_select_list,
+        QuestionType.ORDERING: _check_ordering,
+        QuestionType.CODE: _check_code,
     }
 
     checker = checkers.get(question_type)
@@ -67,3 +69,38 @@ def _check_select_list(student, correct):
     if not isinstance(student, dict) or not isinstance(correct, dict):
         return False
     return {str(k): str(v) for k, v in student.items()} == {str(k): str(v) for k, v in correct.items()}
+
+
+def _check_ordering(student, correct):
+    """Student orders items. Compare as list of indices."""
+    if not isinstance(student, list) or not isinstance(correct, list):
+        return False
+    return [str(s) for s in student] == [str(c) for c in correct]
+
+
+def _check_code(student, correct):
+    """Check code question by comparing student outputs against expected outputs.
+
+    Student answer format: {"outputs": ["output1", "output2", ...]}
+    Correct answer format: {"test_cases": [{"input": "...", "expected_output": "..."}, ...]}
+
+    Each output is compared stripped/trimmed with the corresponding expected_output.
+    """
+    if not isinstance(student, dict) or not isinstance(correct, dict):
+        return False
+
+    outputs = student.get('outputs')
+    test_cases = correct.get('test_cases')
+
+    if not isinstance(outputs, list) or not isinstance(test_cases, list):
+        return False
+
+    if len(outputs) != len(test_cases):
+        return False
+
+    for output, test_case in zip(outputs, test_cases):
+        expected = test_case.get('expected_output', '')
+        if str(output).strip() != str(expected).strip():
+            return False
+
+    return True

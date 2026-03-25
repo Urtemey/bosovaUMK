@@ -10,6 +10,8 @@ import TextInput from '@/components/questions/TextInput';
 import Matching from '@/components/questions/Matching';
 import DragDrop from '@/components/questions/DragDrop';
 import SelectFromList from '@/components/questions/SelectFromList';
+import Ordering from '@/components/questions/Ordering';
+import CodeEditor from '@/components/questions/CodeEditor';
 
 interface Question {
   id: number;
@@ -57,6 +59,86 @@ function QBtn({ num, current, saved, hasAnswer, onClick, compact }: QBtnProps) {
     >
       {num}
     </button>
+  );
+}
+
+/* ─── Horizontal question nav bar (Yandex EGE style) ─────────── */
+interface QNavBarProps {
+  questions: Question[];
+  currentIdx: number;
+  savedQuestions: Set<number>;
+  answers: Record<number, unknown>;
+  onSelect: (idx: number) => void;
+}
+
+function QNavBar({ questions, currentIdx, savedQuestions, answers, onSelect }: QNavBarProps) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const total = questions.length;
+
+  // Auto-scroll to keep current button visible
+  useEffect(() => {
+    if (!scrollRef.current) return;
+    const container = scrollRef.current;
+    const btn = container.children[currentIdx] as HTMLElement | undefined;
+    if (!btn) return;
+    const containerRect = container.getBoundingClientRect();
+    const btnRect = btn.getBoundingClientRect();
+    if (btnRect.left < containerRect.left || btnRect.right > containerRect.right) {
+      btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+  }, [currentIdx]);
+
+  const scrollBy = (dir: number) => {
+    if (!scrollRef.current) return;
+    scrollRef.current.scrollBy({ left: dir * 200, behavior: 'smooth' });
+  };
+
+  return (
+    <div className="q-topnav">
+      <button
+        type="button"
+        className="q-topnav-arrow"
+        onClick={() => onSelect(Math.max(0, currentIdx - 1))}
+        disabled={currentIdx === 0}
+        aria-label="Предыдущий вопрос"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+
+      <div className="q-topnav-scroll" ref={scrollRef}>
+        {questions.map((q, i) => {
+          const isCurrent = i === currentIdx;
+          const isSaved = savedQuestions.has(q.id);
+          const hasAns = answers[q.id] !== undefined;
+          let cls = 'q-topnav-btn';
+          if (isCurrent) cls += ' current';
+          else if (isSaved) cls += ' saved';
+          else if (hasAns) cls += ' answered';
+
+          return (
+            <button
+              key={q.id}
+              type="button"
+              className={cls}
+              onClick={() => onSelect(i)}
+              aria-current={isCurrent ? 'step' : undefined}
+            >
+              {i + 1}
+            </button>
+          );
+        })}
+      </div>
+
+      <button
+        type="button"
+        className="q-topnav-arrow"
+        onClick={() => onSelect(Math.min(total - 1, currentIdx + 1))}
+        disabled={currentIdx === total - 1}
+        aria-label="Следующий вопрос"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+    </div>
   );
 }
 
@@ -139,8 +221,7 @@ export default function AttemptPage() {
   const [showMap, setShowMap] = useState(false);
   const questionAreaRef = useRef<HTMLDivElement>(null);
 
-  // Threshold: use grid sidebar for >=15 questions
-  const isLargeTest = questions.length >= 15;
+  // (removed isLargeTest — using horizontal nav for all)
 
   useEffect(() => {
     async function load() {
@@ -270,6 +351,8 @@ export default function AttemptPage() {
       case 'matching':        return <Matching {...props} />;
       case 'drag_drop':       return <DragDrop {...props} />;
       case 'select_list':     return <SelectFromList {...props} />;
+      case 'ordering':        return <Ordering {...props} />;
+      case 'code':            return <CodeEditor {...props} />;
       default:
         return <p className="t-body">Неизвестный тип вопроса</p>;
     }
@@ -386,68 +469,29 @@ export default function AttemptPage() {
         </div>
       </div>
 
+      {/* ── Horizontal question nav bar ─────────────────────── */}
+      <QNavBar
+        questions={questions}
+        currentIdx={currentIdx}
+        savedQuestions={savedQuestions}
+        answers={answers}
+        onSelect={setCurrentIdx}
+      />
+
       {/* ── Main content ────────────────────────────────────── */}
       <div
         style={{
-          maxWidth: '60rem',
+          maxWidth: '50rem',
           margin: '0 auto',
           padding: '1.25rem 1rem 6rem',
-          display: 'flex',
-          gap: '1.25rem',
-          alignItems: 'flex-start',
         }}
       >
-        {/* Q-nav sidebar — desktop */}
-        <aside
-          className="hidden sm:block"
-          style={{
-            width: isLargeTest ? '11rem' : '3.25rem',
-            flexShrink: 0,
-            position: 'sticky',
-            top: 120,
-          }}
-          aria-label="Навигация по вопросам"
-        >
-          {isLargeTest ? (
-            /* Grid layout for large tests */
-            <div className="q-nav-grid">
-              {questions.map((q, i) => (
-                <QBtn
-                  key={q.id}
-                  num={i + 1}
-                  current={i === currentIdx}
-                  saved={savedQuestions.has(q.id)}
-                  hasAnswer={answers[q.id] !== undefined}
-                  onClick={() => setCurrentIdx(i)}
-                />
-              ))}
-            </div>
-          ) : (
-            /* Single column for small tests */
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-              {questions.map((q, i) => (
-                <QBtn
-                  key={q.id}
-                  num={i + 1}
-                  current={i === currentIdx}
-                  saved={savedQuestions.has(q.id)}
-                  hasAnswer={answers[q.id] !== undefined}
-                  onClick={() => setCurrentIdx(i)}
-                />
-              ))}
-            </div>
-          )}
-        </aside>
-
         {/* Question area */}
-        <div ref={questionAreaRef} style={{ flex: 1, minWidth: 0 }}>
+        <div ref={questionAreaRef}>
           {/* Question header */}
           <div style={{ marginBottom: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-            <span
-              className="t-caption"
-              style={{ fontWeight: 600, color: 'var(--color-accent)', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.6875rem' }}
-            >
-              Вопрос {currentIdx + 1} из {totalCount}
+            <span className="t-subtitle" style={{ margin: 0 }}>
+              Задание {currentIdx + 1}
             </span>
             {currentQuestion && (
               <span className="t-caption">{currentQuestion.points} балл{currentQuestion.points === 1 ? '' : currentQuestion.points < 5 ? 'а' : 'ов'}</span>
@@ -458,7 +502,7 @@ export default function AttemptPage() {
           <div
             className="card-lg"
             style={{
-              padding: '1.5rem',
+              padding: '1.5rem 1.75rem',
               borderLeft: currentIsSaved ? '3px solid var(--color-ok)' : currentHasAnswer ? '3px solid var(--color-accent)' : undefined,
             }}
           >
@@ -471,26 +515,6 @@ export default function AttemptPage() {
               {saveError}
             </div>
           )}
-
-          {/* Mobile Q-nav — horizontal scroll for small, grid for large */}
-          <div
-            className="sm:hidden"
-            style={{ marginTop: '1rem' }}
-            aria-label="Навигация по вопросам"
-          >
-            <div className={isLargeTest ? 'q-nav-grid' : 'q-nav-scroll'}>
-              {questions.map((q, i) => (
-                <QBtn
-                  key={q.id}
-                  num={i + 1}
-                  current={i === currentIdx}
-                  saved={savedQuestions.has(q.id)}
-                  hasAnswer={answers[q.id] !== undefined}
-                  onClick={() => setCurrentIdx(i)}
-                />
-              ))}
-            </div>
-          </div>
 
           {/* Action bar */}
           <div
@@ -527,18 +551,10 @@ export default function AttemptPage() {
                   <path d="M9 18l6-6-6-6" />
                 </svg>
               </button>
-              <span className="kbd hidden sm:inline" title="Стрелки для навигации">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M15 18l-6-6 6-6" />
-                </svg>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 18l6-6-6-6" />
-                </svg>
-              </span>
             </div>
 
             {/* Save / Finish */}
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
               {!currentIsSaved && (
                 <button
                   type="button"
@@ -551,7 +567,7 @@ export default function AttemptPage() {
                       <span className="spinner" style={{ width: 12, height: 12, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.4)', borderTopColor: '#fff' }} />
                       Сохранение...
                     </span>
-                  ) : 'Подтвердить ответ'}
+                  ) : 'Сохранить ответ'}
                 </button>
               )}
               {currentIsSaved && (
@@ -571,46 +587,23 @@ export default function AttemptPage() {
                   Ответ сохранён
                 </span>
               )}
-              {allSaved && (
-                <button
-                  type="button"
-                  onClick={handleFinish}
-                  disabled={submitting}
-                  className="btn btn-cta btn-sm"
-                >
-                  {submitting ? (
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                      <span className="spinner" style={{ width: 12, height: 12, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.4)', borderTopColor: '#fff' }} />
-                      Завершение...
-                    </span>
-                  ) : 'Завершить тест'}
-                </button>
-              )}
-            </div>
-          </div>
 
-          {/* Finish early */}
-          {!allSaved && savedCount > 0 && (
-            <div style={{ marginTop: '1rem', textAlign: 'center' }}>
               <button
                 type="button"
                 onClick={handleFinish}
                 disabled={submitting}
-                className="t-caption"
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: 'var(--color-text-muted)',
-                  padding: 0,
-                  textDecoration: 'underline',
-                  textDecorationStyle: 'dotted',
-                }}
+                className="btn btn-cta btn-sm"
+                style={{ marginLeft: '0.25rem' }}
               >
-                Завершить досрочно ({savedCount}/{totalCount} ответов)
+                {submitting ? (
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                    <span className="spinner" style={{ width: 12, height: 12, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.4)', borderTopColor: '#fff' }} />
+                    Завершение...
+                  </span>
+                ) : 'Завершить'}
               </button>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>

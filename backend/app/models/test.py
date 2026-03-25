@@ -18,7 +18,10 @@ class Test(db.Model):
 
     questions = db.relationship('Question', backref='test', lazy='dynamic',
                                 cascade='all, delete-orphan', order_by='Question.order')
-    assignments = db.relationship('TestAssignment', backref='test', lazy='dynamic')
+    assignments = db.relationship('TestAssignment', backref='test', lazy='dynamic',
+                                   cascade='all, delete-orphan')
+    attempts = db.relationship('TestAttempt', backref='test', lazy='dynamic',
+                                cascade='all, delete-orphan')
 
     DEFAULT_SETTINGS = {
         'show_answer': False,

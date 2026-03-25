@@ -488,12 +488,12 @@ export default function ClassroomPage() {
                     </div>
                     <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                       <span className="t-caption">
-                        Попыток: {(a.settings.max_attempts as number) || 1}
+                        Попыток: {(a.settings?.max_attempts as number) || 1}
                       </span>
-                      {Boolean(a.settings.shuffle_questions) && (
+                      {Boolean(a.settings?.shuffle_questions) && (
                         <span className="t-caption">Перемешивание вопросов</span>
                       )}
-                      {Boolean(a.settings.shuffle_answers) && (
+                      {Boolean(a.settings?.shuffle_answers) && (
                         <span className="t-caption">Перемешивание ответов</span>
                       )}
                     </div>

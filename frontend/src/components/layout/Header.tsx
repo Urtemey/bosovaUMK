@@ -49,36 +49,17 @@ function IconLogin({ active }: { active: boolean }) {
 
 function Logo() {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-      <div
-        style={{
-          width: 32,
-          height: 32,
-          background: 'linear-gradient(135deg, #2b4c7e, #3d6ba8)',
-          borderRadius: 8,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-          boxShadow: '0 2px 8px rgba(43, 76, 126, 0.25)',
-        }}
-      >
-        <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8M12 17v4" />
-        </svg>
-      </div>
-      <span
-        style={{
-          fontFamily: 'var(--font-display), var(--font-sans), system-ui, sans-serif',
-          fontWeight: 800,
-          fontSize: '1.0625rem',
-          color: 'var(--color-text-primary)',
-          letterSpacing: '-0.025em',
-        }}
-      >
-        УМК Информатика
-      </span>
-    </div>
+    <span
+      style={{
+        fontFamily: 'var(--font-display), var(--font-sans), system-ui, sans-serif',
+        fontWeight: 800,
+        fontSize: '1.0625rem',
+        color: 'var(--color-accent)',
+        letterSpacing: '-0.02em',
+      }}
+    >
+      УМК Информатика
+    </span>
   );
 }
 

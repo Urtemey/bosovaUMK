@@ -1,75 +1,508 @@
-Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
-forward-logs-shared.ts:95 [Fast Refresh] rebuilding
-intercept-console-error.ts:42 Error: HTTP 401
-    at apiFetch (api.ts:23:11)
-    at async loadClassrooms (page.tsx:48:20)
-error @ intercept-console-error.ts:42
-:5000/api/classrooms:1  Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
-intercept-console-error.ts:42 Error: HTTP 401
-    at apiFetch (api.ts:23:11)
-    at async loadClassrooms (page.tsx:48:20)
-error @ intercept-console-error.ts:42
-forward-logs-shared.ts:95 [Fast Refresh] done in 418ms
-:5000/api/tests/my:1  Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
-intercept-console-error.ts:42 Error: HTTP 401
-    at apiFetch (api.ts:23:11)
-    at async load (page.tsx:176:23)
-error @ intercept-console-error.ts:42
-:5000/api/tests/my:1  Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
-intercept-console-error.ts:42 Error: HTTP 401
-    at apiFetch (api.ts:23:11)
-    at async load (page.tsx:176:23)
-error @ intercept-console-error.ts:42
-forward-logs-shared.ts:95 [Fast Refresh] rebuilding
-forward-logs-shared.ts:95 [Fast Refresh] done in 305ms
-:5000/api/tests/my:1  Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
-intercept-console-error.ts:42 Error: HTTP 401
-    at apiFetch (api.ts:23:11)
-    at async load (page.tsx:176:23)
-error @ intercept-console-error.ts:42
-:5000/api/tests/my:1  Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
-intercept-console-error.ts:42 Error: HTTP 401
-    at apiFetch (api.ts:23:11)
-    at async load (page.tsx:176:23)
-error @ intercept-console-error.ts:42
-:5000/api/classrooms:1  Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
-intercept-console-error.ts:42 Error: HTTP 401
-    at apiFetch (api.ts:23:11)
-    at async loadClassrooms (page.tsx:48:20)
-error @ intercept-console-error.ts:42
-:5000/api/classrooms:1  Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
-intercept-console-error.ts:42 Error: HTTP 401
-    at apiFetch (api.ts:23:11)
-    at async loadClassrooms (page.tsx:48:20)
-error @ intercept-console-error.ts:42
-:5000/api/classrooms:1  Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
-:5000/api/classrooms:1  Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
-:5000/api/tests/my:1  Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
-intercept-console-error.ts:42 Error: HTTP 401
-    at apiFetch (api.ts:23:11)
-    at async load (page.tsx:176:23)
-error @ intercept-console-error.ts:42
-:5000/api/tests/my:1  Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
-intercept-console-error.ts:42 Error: HTTP 401
-    at apiFetch (api.ts:23:11)
-    at async load (page.tsx:176:23)
-error @ intercept-console-error.ts:42
-:5000/api/classrooms:1  Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
-intercept-console-error.ts:42 Error: HTTP 401
-    at apiFetch (api.ts:23:11)
-    at async loadClassrooms (page.tsx:48:20)
-error @ intercept-console-error.ts:42
-:5000/api/classrooms:1  Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
-intercept-console-error.ts:42 Error: HTTP 401
-    at apiFetch (api.ts:23:11)
-    at async loadClassrooms (page.tsx:48:20)
-error @ intercept-console-error.ts:42
-:5000/api/tests/my:1  Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
-intercept-console-error.ts:42 Error: HTTP 401
-    at apiFetch (api.ts:23:11)
-    at async load (page.tsx:176:23)
-error @ intercept-console-error.ts:42
-:5000/api/tests/my:1  Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)
-intercept-console-error.ts:42 Error: HTTP 401
-    at apiFetch (api.ts:23:11)
-    at async load (page.tsx:176:23)
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 912, in _emit_update_statements
+    c = connection.execute(
+        statement, multiparams, execution_options=execution_options
+    )
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1419, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\sql\elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\engine\default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\psycopg\cursor.py", line 117, in execute
+    raise ex.with_traceback(None)
+sqlalchemy.exc.IntegrityError: (psycopg.errors.NotNullViolation) null value in column "question_id" of relation "answers" violates not-null constraint 
+DETAIL:  Failing row contains (32, 27, null, 0, t, 2026-03-24 08:02:18.764766).
+[SQL: UPDATE answers SET question_id=%(question_id)s::INTEGER WHERE answers.id = %(answers_id)s::INTEGER]
+[parameters: {'question_id': None, 'answers_id': 32}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+127.0.0.1 - - [24/Mar/2026 11:02:19] "DELETE /api/tests/116/questions/2835 HTTP/1.1" 500 -
+[2026-03-24 11:02:19,631] ERROR in app: Exception on /api/tests/116 [DELETE]
+Traceback (most recent call last):
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\engine\default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\psycopg\cursor.py", line 117, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.NotNullViolation: null value in column "test_id" of relation "test_assignments" violates not-null constraint
+DETAIL:  Failing row contains (5, null, null, null, 47cdc9983786, {}, 1, 2026-03-24 08:02:17.897172).
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\flask\app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\flask\app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\flask_cors\extension.py", line 176, in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ~^^^^^^^^^^^^^^^^^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\flask\app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\flask\app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\flask_jwt_extended\view_decorators.py", line 170, in decorator
+    return current_app.ensure_sync(fn)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\servak\Downloads\boZoVa\backend\app\routes\tests.py", line 123, in delete_test
+    db.session.commit()
+    ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\scoping.py", line 597, in commit
+    return self._proxied.commit()
+           ~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2030, in commit
+    trans.commit(_to_root=True)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "<string>", line 2, in commit
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 1311, in commit
+    self._prepare_impl()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "<string>", line 2, in _prepare_impl
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 1286, in _prepare_impl
+    self.session.flush()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4331, in flush
+    self._flush(objects)
+    ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4466, in _flush
+    with util.safe_reraise():
+         ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 121, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4427, in _flush
+    flush_context.execute()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+    ~~~~~~~~~~~^^^^^^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self.mapper,
+        ^^^^^^^^^^^^
+        uow.states_for_mapper_hierarchy(self.mapper, False, False),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        uow,
+        ^^^^
+    )
+    ^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 85, in save_obj
+    _emit_update_statements(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        base_mapper,
+        ^^^^^^^^^^^^
+    ...<3 lines>...
+        update,
+        ^^^^^^^
+    )
+    ^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 912, in _emit_update_statements
+    c = connection.execute(
+        statement, multiparams, execution_options=execution_options
+    )
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1419, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\sql\elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\engine\default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\psycopg\cursor.py", line 117, in execute
+    raise ex.with_traceback(None)
+sqlalchemy.exc.IntegrityError: (psycopg.errors.NotNullViolation) null value in column "test_id" of relation "test_assignments" violates not-null constraint
+DETAIL:  Failing row contains (5, null, null, null, 47cdc9983786, {}, 1, 2026-03-24 08:02:17.897172).
+[SQL: UPDATE test_assignments SET test_id=%(test_id)s::INTEGER WHERE test_assignments.id = %(test_assignments_id)s::INTEGER]
+[parameters: {'test_id': None, 'test_assignments_id': 5}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+127.0.0.1 - - [24/Mar/2026 11:02:19] "DELETE /api/tests/116 HTTP/1.1" 500 -
+127.0.0.1 - - [24/Mar/2026 11:07:42] "GET /api/auth/me HTTP/1.1" 401 -
+127.0.0.1 - - [24/Mar/2026 11:07:59] "POST /api/auth/login HTTP/1.1" 200 -
+[2026-03-24 11:07:59,889] ERROR in app: Exception on /api/tests/116/questions/2835 [DELETE]
+Traceback (most recent call last):
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\engine\default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\psycopg\cursor.py", line 117, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.NotNullViolation: null value in column "question_id" of relation "answers" violates not-null constraint
+DETAIL:  Failing row contains (32, 27, null, 0, t, 2026-03-24 08:02:18.764766).
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\flask\app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\flask\app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\flask_cors\extension.py", line 176, in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ~^^^^^^^^^^^^^^^^^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\flask\app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\flask\app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\flask_jwt_extended\view_decorators.py", line 170, in decorator
+    return current_app.ensure_sync(fn)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\servak\Downloads\boZoVa\backend\app\routes\tests.py", line 245, in delete_question
+    question_type=q_data['question_type'],
+    ^^^^^^^^^^^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\scoping.py", line 597, in commit
+    return self._proxied.commit()
+           ~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2030, in commit
+    trans.commit(_to_root=True)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "<string>", line 2, in commit
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 1311, in commit
+    self._prepare_impl()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "<string>", line 2, in _prepare_impl
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 1286, in _prepare_impl
+    self.session.flush()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4331, in flush
+    self._flush(objects)
+    ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4466, in _flush
+    with util.safe_reraise():
+         ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 121, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4427, in _flush
+    flush_context.execute()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+    ~~~~~~~~~~~^^^^^^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self.mapper,
+        ^^^^^^^^^^^^
+        uow.states_for_mapper_hierarchy(self.mapper, False, False),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        uow,
+        ^^^^
+    )
+    ^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 85, in save_obj
+    _emit_update_statements(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        base_mapper,
+        ^^^^^^^^^^^^
+    ...<3 lines>...
+        update,
+        ^^^^^^^
+    )
+    ^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 912, in _emit_update_statements
+    c = connection.execute(
+        statement, multiparams, execution_options=execution_options
+    )
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1419, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\sql\elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\engine\default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\psycopg\cursor.py", line 117, in execute
+    raise ex.with_traceback(None)
+sqlalchemy.exc.IntegrityError: (psycopg.errors.NotNullViolation) null value in column "question_id" of relation "answers" violates not-null constraint 
+DETAIL:  Failing row contains (32, 27, null, 0, t, 2026-03-24 08:02:18.764766).
+[SQL: UPDATE answers SET question_id=%(question_id)s::INTEGER WHERE answers.id = %(answers_id)s::INTEGER]
+[parameters: {'question_id': None, 'answers_id': 32}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+127.0.0.1 - - [24/Mar/2026 11:07:59] "DELETE /api/tests/116/questions/2835 HTTP/1.1" 500 -
+127.0.0.1 - - [24/Mar/2026 11:08:00] "POST /api/tests HTTP/1.1" 201 -
+127.0.0.1 - - [24/Mar/2026 11:08:00] "POST /api/tests/117/questions HTTP/1.1" 201 -
+127.0.0.1 - - [24/Mar/2026 11:08:01] "POST /api/assignments HTTP/1.1" 201 -
+127.0.0.1 - - [24/Mar/2026 11:08:01] "POST /api/attempts/start HTTP/1.1" 201 -
+127.0.0.1 - - [24/Mar/2026 11:08:01] "POST /api/attempts/28/answer HTTP/1.1" 200 -
+127.0.0.1 - - [24/Mar/2026 11:08:02] "POST /api/attempts/28/finish HTTP/1.1" 200 -
+[2026-03-24 11:08:02,328] ERROR in app: Exception on /api/tests/117 [DELETE]
+Traceback (most recent call last):
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\engine\default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\psycopg\cursor.py", line 117, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.NotNullViolation: null value in column "test_id" of relation "test_assignments" violates not-null constraint
+DETAIL:  Failing row contains (6, null, null, null, 5f4335842a50, {}, 1, 2026-03-24 08:08:01.090591).
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\flask\app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\flask\app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\flask_cors\extension.py", line 176, in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ~^^^^^^^^^^^^^^^^^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\flask\app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\flask\app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\flask_jwt_extended\view_decorators.py", line 170, in decorator
+    return current_app.ensure_sync(fn)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\servak\Downloads\boZoVa\backend\app\routes\tests.py", line 123, in delete_test
+    teacher_id = int(get_jwt_identity())
+    ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\scoping.py", line 597, in commit
+    return self._proxied.commit()
+           ~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2030, in commit
+    trans.commit(_to_root=True)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "<string>", line 2, in commit
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 1311, in commit
+    self._prepare_impl()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "<string>", line 2, in _prepare_impl
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 1286, in _prepare_impl
+    self.session.flush()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4331, in flush
+    self._flush(objects)
+    ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4466, in _flush
+    with util.safe_reraise():
+         ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 121, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4427, in _flush
+    flush_context.execute()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+    ~~~~~~~~~~~^^^^^^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self.mapper,
+        ^^^^^^^^^^^^
+        uow.states_for_mapper_hierarchy(self.mapper, False, False),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        uow,
+        ^^^^
+    )
+    ^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 85, in save_obj
+    _emit_update_statements(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        base_mapper,
+        ^^^^^^^^^^^^
+    ...<3 lines>...
+        update,
+        ^^^^^^^
+    )
+    ^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 912, in _emit_update_statements
+    c = connection.execute(
+        statement, multiparams, execution_options=execution_options
+    )
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1419, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\sql\elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1986, in _exec_single_context
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\sqlalchemy\engine\default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\servak\Downloads\boZoVa\.venv\Lib\site-packages\psycopg\cursor.py", line 117, in execute
+    raise ex.with_traceback(None)
+sqlalchemy.exc.IntegrityError: (psycopg.errors.NotNullViolation) null value in column "test_id" of relation "test_assignments" violates not-null constraint
+DETAIL:  Failing row contains (6, null, null, null, 5f4335842a50, {}, 1, 2026-03-24 08:08:01.090591).
+[SQL: UPDATE test_assignments SET test_id=%(test_id)s::INTEGER WHERE test_assignments.id = %(test_assignments_id)s::INTEGER]
+[parameters: {'test_id': None, 'test_assignments_id': 6}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+127.0.0.1 - - [24/Mar/2026 11:08:02] "DELETE /api/tests/117 HTTP/1.1" 500 -

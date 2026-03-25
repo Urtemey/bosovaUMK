@@ -8,8 +8,10 @@ class QuestionType:
     MATCHING = 'matching'
     DRAG_DROP = 'drag_drop'
     SELECT_LIST = 'select_list'
+    ORDERING = 'ordering'
+    CODE = 'code'
 
-    ALL = [SINGLE_CHOICE, MULTIPLE_CHOICE, TEXT_INPUT, MATCHING, DRAG_DROP, SELECT_LIST]
+    ALL = [SINGLE_CHOICE, MULTIPLE_CHOICE, TEXT_INPUT, MATCHING, DRAG_DROP, SELECT_LIST, ORDERING, CODE]
 
 
 class Question(db.Model):
@@ -23,7 +25,8 @@ class Question(db.Model):
     correct_answer = db.Column(db.JSON, nullable=False)
     points = db.Column(db.Integer, default=1)
 
-    answers = db.relationship('Answer', backref='question', lazy='dynamic')
+    answers = db.relationship('Answer', backref='question', lazy='dynamic',
+                               cascade='all, delete-orphan')
 
     def to_dict(self, include_correct=False):
         data = {

@@ -35,12 +35,14 @@ export default function Matching({ content, value, onChange, disabled }: Props) 
   };
 
   const COLORS = [
-    'bg-blue-100 border-blue-400 text-blue-700',
-    'bg-emerald-100 border-emerald-400 text-emerald-700',
-    'bg-violet-100 border-violet-400 text-violet-700',
-    'bg-indigo-100 border-indigo-400 text-indigo-700',
-    'bg-rose-100 border-rose-400 text-rose-700',
-    'bg-cyan-100 border-cyan-400 text-cyan-700',
+    'bg-blue-200 border-blue-600 text-blue-900',
+    'bg-emerald-200 border-emerald-600 text-emerald-900',
+    'bg-violet-200 border-violet-600 text-violet-900',
+    'bg-amber-200 border-amber-600 text-amber-900',
+    'bg-rose-200 border-rose-600 text-rose-900',
+    'bg-cyan-200 border-cyan-600 text-cyan-900',
+    'bg-orange-200 border-orange-600 text-orange-900',
+    'bg-fuchsia-200 border-fuchsia-600 text-fuchsia-900',
   ];
 
   const getColor = (leftIdx: string) => {

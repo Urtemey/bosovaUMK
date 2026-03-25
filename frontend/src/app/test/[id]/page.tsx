@@ -536,14 +536,30 @@ export default function TestViewPage() {
         />
       )}
 
-      {/* Questions preview */}
+      {/* Start button */}
+      <button
+        type="button"
+        onClick={handleStartTest}
+        disabled={starting}
+        className="btn btn-primary btn-lg"
+        style={{ width: '100%', marginBottom: '1.5rem' }}
+      >
+        {starting ? (
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span className="spinner" style={{ width: 16, height: 16, borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)', borderTopColor: '#fff' }} />
+            Загрузка...
+          </span>
+        ) : 'Начать тест'}
+      </button>
+
+      {/* Questions preview (first 5) */}
       {test.questions.length > 0 && (
-        <div className="card-lg" style={{ marginBottom: '1.5rem', overflow: 'hidden' }}>
+        <div className="card-lg" style={{ overflow: 'hidden' }}>
           <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--color-border)' }}>
             <h2 className="t-subtitle">Содержание теста</h2>
           </div>
           <div>
-            {test.questions.map((q, i) => (
+            {test.questions.slice(0, 5).map((q, i) => (
               <div
                 key={q.id}
                 style={{
@@ -551,7 +567,7 @@ export default function TestViewPage() {
                   alignItems: 'center',
                   gap: '0.75rem',
                   padding: '0.75rem 1.25rem',
-                  borderBottom: i < test.questions.length - 1 ? '1px solid var(--color-border)' : 'none',
+                  borderBottom: '1px solid var(--color-border)',
                 }}
               >
                 <span
@@ -589,25 +605,19 @@ export default function TestViewPage() {
                 <span className="t-caption" style={{ flexShrink: 0 }}>{q.points} б.</span>
               </div>
             ))}
+            {test.questions.length > 5 && (
+              <div style={{
+                padding: '0.75rem 1.25rem',
+                textAlign: 'center',
+                color: 'var(--color-text-muted)',
+                fontSize: '0.875rem',
+              }}>
+                ... и ещё {test.questions.length - 5} {test.questions.length - 5 === 1 ? 'вопрос' : test.questions.length - 5 < 5 ? 'вопроса' : 'вопросов'}
+              </div>
+            )}
           </div>
         </div>
       )}
-
-      {/* Start button */}
-      <button
-        type="button"
-        onClick={handleStartTest}
-        disabled={starting}
-        className="btn btn-primary btn-lg"
-        style={{ width: '100%' }}
-      >
-        {starting ? (
-          <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span className="spinner" style={{ width: 16, height: 16, borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)', borderTopColor: '#fff' }} />
-            Загрузка...
-          </span>
-        ) : 'Начать тест'}
-      </button>
     </div>
   );
 }

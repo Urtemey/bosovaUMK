@@ -15,7 +15,8 @@ class TestAssignment(db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey('teachers.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    attempts = db.relationship('TestAttempt', backref='assignment', lazy='dynamic')
+    attempts = db.relationship('TestAttempt', backref='assignment', lazy='dynamic',
+                                cascade='all, delete-orphan')
 
     def generate_share_link(self):
         self.share_link = uuid.uuid4().hex[:12]

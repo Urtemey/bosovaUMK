@@ -35,57 +35,7 @@ const GRADE_COLOR: Record<number, string> = {
   11: '#9b45b5',
 };
 
-const GRADE_LABELS: Record<number, string> = {
-  5: 'Знакомство с ПК',
-  6: 'Алгоритмы',
-  7: 'Информация',
-  8: 'Архитектура',
-  9: 'Сети и модели',
-  10: 'Программирование',
-  11: 'ИИ и данные',
-};
 
-function GradeIcon({ grade, color }: { grade: number; color: string }) {
-  const icons: Record<number, React.ReactNode> = {
-    5: (
-      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8M12 17v4" />
-      </svg>
-    ),
-    6: (
-      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
-      </svg>
-    ),
-    7: (
-      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <ellipse cx="12" cy="5" rx="9" ry="3" /><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" /><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
-      </svg>
-    ),
-    8: (
-      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="4" y="4" width="16" height="16" rx="2" /><rect x="9" y="9" width="6" height="6" /><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3" />
-      </svg>
-    ),
-    9: (
-      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="2" /><path d="M16.24 7.76a6 6 0 010 8.49m-8.48-.01a6 6 0 010-8.49m11.31-2.82a10 10 0 010 14.14m-14.14 0a10 10 0 010-14.14" />
-      </svg>
-    ),
-    10: (
-      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="4 17 10 11 4 5" /><line x1="12" y1="19" x2="20" y2="19" />
-      </svg>
-    ),
-    11: (
-      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 2a4 4 0 014 4v1a3 3 0 013 3 3 3 0 01-1 5.83V17a4 4 0 01-4 4h-4a4 4 0 01-4-4v-1.17A3 3 0 015 10a3 3 0 013-3V6a4 4 0 014-4z" />
-        <path d="M10 10h4M10 14h4" />
-      </svg>
-    ),
-  };
-  return <>{icons[grade] || icons[5]}</>;
-}
 
 function pluralQ(n: number) {
   if (n === 1) return '1 вопрос';
@@ -106,25 +56,17 @@ function TestCard({ test, index }: { test: Test; index: number }) {
       <div className="test-card-top" style={{ background: bg }}>
         <span
           style={{
-            position: 'absolute',
-            right: '0.75rem',
-            bottom: '-0.5rem',
-            fontSize: '3.5rem',
+            fontSize: '1.5rem',
             fontWeight: 900,
             color,
-            opacity: 0.07,
             lineHeight: 1,
-            pointerEvents: 'none',
-            userSelect: 'none',
           }}
         >
-          {test.grade}
+          {test.grade} класс
         </span>
-        <GradeIcon grade={test.grade} color={color} />
       </div>
 
       <div className="test-card-body">
-        <span className="pill-tag pill-tag-blue">Информатика</span>
         <h3
           style={{
             fontSize: '0.9375rem',
@@ -156,10 +98,6 @@ function TestCard({ test, index }: { test: Test; index: number }) {
       </div>
 
       <div className="test-card-footer">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-          <circle cx="12" cy="12" r="3" />
-        </svg>
         <span>{pluralQ(test.question_count)}</span>
         <span style={{ marginLeft: 'auto', color: 'var(--color-accent)', fontWeight: 600 }}>
           Пройти →
@@ -317,7 +255,7 @@ export default function HomePage() {
                 className={`grade-pill-btn ${selectedGrade === g ? 'active' : ''}`}
                 onClick={() => setSelectedGrade(g)}
                 aria-pressed={selectedGrade === g}
-                title={GRADE_LABELS[g]}
+                title={`${g} класс`}
               >
                 {g}
               </button>
@@ -331,9 +269,6 @@ export default function HomePage() {
             <span className="section-bar" style={{ background: gradeColor }} />
             <span style={{ fontWeight: 800, fontSize: '1.0625rem', color: 'var(--color-text-primary)' }}>
               {selectedGrade} класс
-            </span>
-            <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>
-              — {GRADE_LABELS[selectedGrade]}
             </span>
             {!loading && (
               <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', marginLeft: 'auto' }}>

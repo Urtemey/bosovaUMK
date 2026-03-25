@@ -95,5 +95,13 @@ def get_me():
 @jwt_required(refresh=True)
 def refresh():
     identity = get_jwt_identity()
-    access_token = create_access_token(identity=identity)
+    user_id = int(identity)
+
+    teacher = Teacher.query.get(user_id)
+    if teacher:
+        role = 'teacher'
+    else:
+        role = 'student'
+
+    access_token = create_access_token(identity=identity, additional_claims={'role': role})
     return jsonify({'access_token': access_token})

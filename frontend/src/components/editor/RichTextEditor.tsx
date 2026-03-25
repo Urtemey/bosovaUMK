@@ -226,6 +226,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: Props) 
       KatexInline,
     ],
     content: value,
+    immediatelyRender: false,
     onUpdate: handleUpdate,
     editorProps: {
       attributes: {

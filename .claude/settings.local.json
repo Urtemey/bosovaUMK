@@ -50,7 +50,31 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(gh api:*)",
       "Bash(curl -sL \"https://raw.githubusercontent.com/anthropics/claude-cookbooks/main/coding/prompting_for_frontend_aesthetics.ipynb\")",
-      "Bash(npx next:*)"
+      "Bash(npx next:*)",
+      "Bash(curl -s http://localhost:5000/api/auth/me)",
+      "Bash(curl -s \"http://localhost:5000/api/tests/1\")",
+      "Bash(../.venv/Scripts/python -m flask db migrate -m \"add cascade deletes\")",
+      "Bash(../.venv/Scripts/python -c \":*)",
+      "Bash(cmd.exe /c 'netstat -ano')",
+      "Bash(cmd.exe /c \"for /f \\\\\"tokens=5\\\\\" %a in \\('netstat -ano ^| findstr :5000 ^| findstr LISTENING'\\) do @echo %a\" 2>/dev/null)",
+      "Bash(cmd.exe /c \"netstat -ano | findstr 5000\" 2>/dev/null)",
+      "Bash(powershell.exe -Command \"Get-NetTCPConnection -LocalPort 5000 -ErrorAction SilentlyContinue | Select-Object -Property OwningProcess\" 2>/dev/null)",
+      "Bash(powershell.exe -Command \"Get-NetTCPConnection -LocalPort 5000 | Format-Table OwningProcess -AutoSize\")",
+      "Bash(powershell.exe -Command \"Get-Process | Where-Object { \\\\$_.ProcessName -like '*python*' } | Format-Table Id,ProcessName,MainWindowTitle -AutoSize\")",
+      "Bash(tr n:*)",
+      "Bash(../.venv/Scripts/python import_contenttests.py --dry-run)",
+      "Bash(../.venv/Scripts/python import_contenttests.py)",
+      "Bash(curl -s http://localhost:5000/api/tests?grade=7)",
+      "Bash(python -c \"import sys,json; data=json.load\\(sys.stdin\\); print\\(f''''Tests for grade 7: {len\\(data\\)}''''\\); [print\\(f''''  id={t[\"\"id\"\"]} title={t[\"\"title\"\"]} q_count={t.get\\(\"\"question_count\"\",\"\"?\"\"\\)}''''\\) for t in data[:5]]\")",
+      "Bash(curl -s http://localhost:5000/api/tests/26)",
+      "Bash(curl -s http://localhost:5000/api/tests?grade=9)",
+      "Bash(python -c \":*)",
+      "Bash(curl -s http://localhost:5000/api/tests/46)",
+      "Bash(curl -s http://localhost:5000/api/tests)",
+      "Bash(python:*)",
+      "Bash(curl -s http://localhost:5000/api/assignments/by-link/c3d220fbd898)",
+      "Bash(npm install:*)",
+      "Bash(curl:*)"
     ]
   }
 }

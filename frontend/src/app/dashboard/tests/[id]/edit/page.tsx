@@ -12,6 +12,8 @@ import TextInput from '@/components/questions/TextInput';
 import Matching from '@/components/questions/Matching';
 import DragDrop from '@/components/questions/DragDrop';
 import SelectFromList from '@/components/questions/SelectFromList';
+import Ordering from '@/components/questions/Ordering';
+import CodeEditor from '@/components/questions/CodeEditor';
 
 const RichTextEditor = dynamic(() => import('@/components/editor/RichTextEditor'), { ssr: false });
 
@@ -38,7 +40,7 @@ interface Test {
   is_published: boolean;
 }
 
-type QuestionType = 'single_choice' | 'multiple_choice' | 'text_input' | 'matching' | 'drag_drop' | 'select_list';
+type QuestionType = 'single_choice' | 'multiple_choice' | 'text_input' | 'matching' | 'drag_drop' | 'select_list' | 'ordering' | 'code';
 
 const QUESTION_TYPE_LABELS: Record<string, string> = {
   single_choice: 'Одиночный выбор',
@@ -47,9 +49,11 @@ const QUESTION_TYPE_LABELS: Record<string, string> = {
   matching: 'Соответствие',
   drag_drop: 'Перетаскивание',
   select_list: 'Выбор из списка',
+  ordering: 'Упорядочивание',
+  code: 'Код (программирование)',
 };
 
-const QUESTION_TYPES: QuestionType[] = ['single_choice', 'multiple_choice', 'text_input', 'matching', 'drag_drop', 'select_list'];
+const QUESTION_TYPES: QuestionType[] = ['single_choice', 'multiple_choice', 'text_input', 'matching', 'drag_drop', 'select_list', 'ordering', 'code'];
 
 /* ─── Question Constructor ──────────────────────────────────── */
 
@@ -74,6 +78,12 @@ interface QuestionFormData {
   selectRows: string[];
   selectOptions: string[];
   selectCorrect: Record<string, string>; // row_idx -> option_idx
+  // ordering
+  orderItems: string[];
+  // code
+  codeLanguage: string;
+  codeStarterCode: string;
+  codeTestCases: { input: string; expected_output: string }[];
 }
 
 function emptyFormData(type: QuestionType): QuestionFormData {
@@ -93,6 +103,10 @@ function emptyFormData(type: QuestionType): QuestionFormData {
     selectRows: ['', ''],
     selectOptions: ['', ''],
     selectCorrect: { '0': '0', '1': '0' },
+    orderItems: ['', '', ''],
+    codeLanguage: 'python',
+    codeStarterCode: '',
+    codeTestCases: [{ input: '', expected_output: '' }],
   };
 }
 
@@ -140,6 +154,17 @@ function formDataFromQuestion(q: Question): QuestionFormData {
       fd.selectOptions = (content.options as string[]) || ['', ''];
       const ca = q.correct_answer as Record<string, string> | undefined;
       if (ca) fd.selectCorrect = ca;
+      break;
+    }
+    case 'ordering': {
+      fd.orderItems = (content.items as string[]) || ['', '', ''];
+      break;
+    }
+    case 'code': {
+      fd.codeLanguage = (content.language as string) || 'python';
+      fd.codeStarterCode = (content.starter_code as string) || '';
+      const ca = q.correct_answer as { test_cases?: { input: string; expected_output: string }[] } | undefined;
+      fd.codeTestCases = ca?.test_cases || [{ input: '', expected_output: '' }];
       break;
     }
   }
@@ -192,6 +217,23 @@ function buildPayload(fd: QuestionFormData): { question_type: string; content: R
         content: { text: fd.text, rows: fd.selectRows, columns: [], options: fd.selectOptions },
         correct_answer: fd.selectCorrect,
       };
+    case 'ordering':
+      return {
+        ...base,
+        content: { text: fd.text, items: fd.orderItems },
+        correct_answer: fd.orderItems.map((_, i) => i),
+      };
+    case 'code':
+      return {
+        ...base,
+        content: {
+          text: fd.text,
+          language: fd.codeLanguage,
+          starter_code: fd.codeStarterCode,
+          test_cases: fd.codeTestCases,
+        },
+        correct_answer: { test_cases: fd.codeTestCases },
+      };
   }
 }
 
@@ -211,6 +253,8 @@ function QuestionPreview({ fd }: { fd: QuestionFormData }) {
       {fd.question_type === 'matching' && <Matching {...previewProps} />}
       {fd.question_type === 'drag_drop' && <DragDrop {...previewProps} />}
       {fd.question_type === 'select_list' && <SelectFromList {...previewProps} />}
+      {fd.question_type === 'ordering' && <Ordering {...previewProps} />}
+      {fd.question_type === 'code' && <CodeEditor {...previewProps} />}
     </div>
   );
 }
@@ -678,6 +722,147 @@ function QuestionConstructor({
                         &times;
                       </button>
                     )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'ordering':
+        return (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+              <span className="label">Элементы (в правильном порядке)</span>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => update({ orderItems: [...fd.orderItems, ''] })}>+ Добавить</button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {fd.orderItems.map((item, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ width: '1.5rem', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>{i + 1}</span>
+                  <input
+                    type="text"
+                    className="input"
+                    value={item}
+                    onChange={(e) => {
+                      const items = [...fd.orderItems];
+                      items[i] = e.target.value;
+                      update({ orderItems: items });
+                    }}
+                    placeholder={`Элемент ${i + 1}`}
+                    style={{ flex: 1 }}
+                  />
+                  {fd.orderItems.length > 2 && (
+                    <button
+                      type="button"
+                      onClick={() => update({ orderItems: fd.orderItems.filter((_, j) => j !== i) })}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-danger)', fontSize: '1.125rem', padding: '0.25rem', lineHeight: 1 }}
+                      title="Удалить"
+                    >
+                      &times;
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '0.5rem' }}>
+              Введите элементы в правильном порядке. При прохождении теста они будут перемешаны.
+            </p>
+          </div>
+        );
+
+      case 'code':
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {/* Language */}
+            <div>
+              <label className="label">Язык программирования</label>
+              <select
+                className="input"
+                value={fd.codeLanguage}
+                onChange={(e) => update({ codeLanguage: e.target.value })}
+                style={{ maxWidth: '14rem' }}
+              >
+                <option value="python">Python</option>
+                <option value="pascal">Pascal</option>
+              </select>
+            </div>
+
+            {/* Starter code */}
+            <div>
+              <label className="label">Начальный код (необязательно)</label>
+              <textarea
+                className="input input-mono"
+                value={fd.codeStarterCode}
+                onChange={(e) => update({ codeStarterCode: e.target.value })}
+                placeholder="# Напишите ваше решение здесь"
+                rows={4}
+                style={{ fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace", fontSize: '0.8125rem' }}
+              />
+            </div>
+
+            {/* Test cases */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <span className="label" style={{ margin: 0 }}>Тестовые случаи</span>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => update({ codeTestCases: [...fd.codeTestCases, { input: '', expected_output: '' }] })}
+                >
+                  + Добавить тест
+                </button>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                {fd.codeTestCases.map((tc, i) => (
+                  <div key={i} style={{
+                    padding: '0.75rem', borderRadius: 8,
+                    border: '1px solid var(--color-border)', background: 'var(--color-surface-2)',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.375rem' }}>
+                      <span style={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Тест {i + 1}</span>
+                      {fd.codeTestCases.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => update({ codeTestCases: fd.codeTestCases.filter((_, j) => j !== i) })}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-danger)', fontSize: '1rem', padding: '0.125rem', lineHeight: 1 }}
+                        >
+                          &times;
+                        </button>
+                      )}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                      <div>
+                        <label style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', display: 'block', marginBottom: '0.125rem' }}>Входные данные (stdin)</label>
+                        <textarea
+                          className="input input-mono"
+                          value={tc.input}
+                          onChange={(e) => {
+                            const cases = [...fd.codeTestCases];
+                            cases[i] = { ...cases[i], input: e.target.value };
+                            update({ codeTestCases: cases });
+                          }}
+                          rows={2}
+                          placeholder="5&#10;3 7"
+                          style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.75rem' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', display: 'block', marginBottom: '0.125rem' }}>Ожидаемый вывод (stdout)</label>
+                        <textarea
+                          className="input input-mono"
+                          value={tc.expected_output}
+                          onChange={(e) => {
+                            const cases = [...fd.codeTestCases];
+                            cases[i] = { ...cases[i], expected_output: e.target.value };
+                            update({ codeTestCases: cases });
+                          }}
+                          rows={2}
+                          placeholder="10"
+                          style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.75rem' }}
+                        />
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>

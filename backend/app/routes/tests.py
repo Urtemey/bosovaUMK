@@ -3,6 +3,9 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db
 from app.models.test import Test
 from app.models.question import Question, QuestionType
+from app.models.answer import Answer
+from app.models.attempt import TestAttempt
+from app.models.assignment import TestAssignment
 
 tests_bp = Blueprint('tests', __name__)
 
@@ -119,6 +122,25 @@ def duplicate_test(test_id):
 def delete_test(test_id):
     teacher_id = int(get_jwt_identity())
     test = Test.query.filter_by(id=test_id, created_by=teacher_id).first_or_404()
+
+    # Delete answers for all attempts of this test
+    attempt_ids = [a.id for a in TestAttempt.query.filter_by(test_id=test.id).all()]
+    if attempt_ids:
+        Answer.query.filter(Answer.attempt_id.in_(attempt_ids)).delete(synchronize_session=False)
+
+    # Delete attempts
+    TestAttempt.query.filter_by(test_id=test.id).delete(synchronize_session=False)
+
+    # Delete assignments
+    TestAssignment.query.filter_by(test_id=test.id).delete(synchronize_session=False)
+
+    # Delete answers referencing questions of this test
+    question_ids = [q.id for q in Question.query.filter_by(test_id=test.id).all()]
+    if question_ids:
+        Answer.query.filter(Answer.question_id.in_(question_ids)).delete(synchronize_session=False)
+
+    # Delete questions and test
+    Question.query.filter_by(test_id=test.id).delete(synchronize_session=False)
     db.session.delete(test)
     db.session.commit()
     return jsonify({'message': 'Тест удалён'})
@@ -241,6 +263,10 @@ def delete_question(test_id, question_id):
     teacher_id = int(get_jwt_identity())
     Test.query.filter_by(id=test_id, created_by=teacher_id).first_or_404()
     question = Question.query.filter_by(id=question_id, test_id=test_id).first_or_404()
+
+    # Delete answers referencing this question
+    Answer.query.filter_by(question_id=question.id).delete(synchronize_session=False)
+
     db.session.delete(question)
     db.session.commit()
     return jsonify({'message': 'Вопрос удалён'})
