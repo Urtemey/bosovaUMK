@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, memo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { attemptsApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -12,6 +12,7 @@ import DragDrop from '@/components/questions/DragDrop';
 import SelectFromList from '@/components/questions/SelectFromList';
 import Ordering from '@/components/questions/Ordering';
 import CodeEditor from '@/components/questions/CodeEditor';
+import PythonPanel from '@/components/ui/PythonPanel';
 
 interface Question {
   id: number;
@@ -32,6 +33,35 @@ function formatTime(seconds: number) {
   const s = seconds % 60;
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 }
+
+/* ─── Self-contained Timer (doesn't re-render parent) ─────────── */
+const Timer = memo(function Timer({ startedAt }: { startedAt: string }) {
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    const start = new Date(startedAt).getTime();
+    const interval = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - start) / 1000));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [startedAt]);
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontVariantNumeric: 'tabular-nums' }}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <path d="M12 6v6l4 2" />
+      </svg>
+      <span style={{
+        fontFamily: "'SF Mono', 'Fira Mono', monospace",
+        fontSize: '0.9375rem', fontWeight: 600,
+        color: 'var(--color-text-primary)',
+      }}>
+        {formatTime(elapsed)}
+      </span>
+    </div>
+  );
+});
 
 /* ─── Q-nav button (compact) ─────────────────────────────────── */
 interface QBtnProps {
@@ -71,7 +101,7 @@ interface QNavBarProps {
   onSelect: (idx: number) => void;
 }
 
-function QNavBar({ questions, currentIdx, savedQuestions, answers, onSelect }: QNavBarProps) {
+const QNavBar = memo(function QNavBar({ questions, currentIdx, savedQuestions, answers, onSelect }: QNavBarProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const total = questions.length;
 
@@ -93,11 +123,58 @@ function QNavBar({ questions, currentIdx, savedQuestions, answers, onSelect }: Q
     scrollRef.current.scrollBy({ left: dir * 200, behavior: 'smooth' });
   };
 
+  const btnSize = 44; // px
+  const gap = 6; // px
+  const visibleCount = 7;
+  const scrollWidth = visibleCount * btnSize + (visibleCount - 1) * gap;
+
+  const arrowStyle: React.CSSProperties = {
+    flexShrink: 0,
+    width: 40,
+    height: 40,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    border: 'none',
+    background: 'none',
+    color: 'var(--color-text-secondary)',
+    cursor: 'pointer',
+    borderRadius: 10,
+  };
+
+  const getBtnStyle = (isCurrent: boolean, isSaved: boolean, hasAns: boolean): React.CSSProperties => ({
+    flexShrink: 0,
+    width: btnSize,
+    height: btnSize,
+    borderRadius: 10,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '1rem',
+    fontWeight: 700,
+    border: isCurrent ? 'none' : isSaved ? '1.5px solid #a7e8c0' : hasAns ? '1.5px solid var(--color-accent-muted)' : '1.5px solid transparent',
+    background: isCurrent ? 'var(--color-accent)' : isSaved ? 'var(--color-ok-bg)' : hasAns ? 'var(--color-accent-light)' : 'transparent',
+    color: isCurrent ? '#fff' : isSaved ? 'var(--color-ok)' : hasAns ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+    cursor: 'pointer',
+    boxShadow: isCurrent ? '0 2px 10px var(--color-accent-glow)' : 'none',
+  });
+
   return (
-    <div className="q-topnav">
+    <div style={{
+      position: 'sticky',
+      top: 95,
+      zIndex: 38,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 0,
+      background: 'var(--color-surface)',
+      borderBottom: '1px solid var(--color-border)',
+      padding: '0.625rem 0',
+    }}>
       <button
         type="button"
-        className="q-topnav-arrow"
+        style={{ ...arrowStyle, opacity: currentIdx === 0 ? 0.3 : 1 }}
         onClick={() => onSelect(Math.max(0, currentIdx - 1))}
         disabled={currentIdx === 0}
         aria-label="Предыдущий вопрос"
@@ -105,21 +182,29 @@ function QNavBar({ questions, currentIdx, savedQuestions, answers, onSelect }: Q
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
       </button>
 
-      <div className="q-topnav-scroll" ref={scrollRef}>
+      <div
+        ref={scrollRef}
+        style={{
+          display: 'flex',
+          gap,
+          overflowX: 'auto',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+          padding: '2px 0',
+          scrollBehavior: 'smooth',
+          maxWidth: scrollWidth,
+        }}
+      >
         {questions.map((q, i) => {
           const isCurrent = i === currentIdx;
           const isSaved = savedQuestions.has(q.id);
           const hasAns = answers[q.id] !== undefined;
-          let cls = 'q-topnav-btn';
-          if (isCurrent) cls += ' current';
-          else if (isSaved) cls += ' saved';
-          else if (hasAns) cls += ' answered';
 
           return (
             <button
               key={q.id}
               type="button"
-              className={cls}
+              style={getBtnStyle(isCurrent, isSaved, hasAns)}
               onClick={() => onSelect(i)}
               aria-current={isCurrent ? 'step' : undefined}
             >
@@ -131,16 +216,18 @@ function QNavBar({ questions, currentIdx, savedQuestions, answers, onSelect }: Q
 
       <button
         type="button"
-        className="q-topnav-arrow"
+        style={{ ...arrowStyle, opacity: currentIdx === total - 1 ? 0.3 : 1 }}
         onClick={() => onSelect(Math.min(total - 1, currentIdx + 1))}
         disabled={currentIdx === total - 1}
         aria-label="Следующий вопрос"
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
       </button>
+
+      <style>{`.q-topnav-scroll::-webkit-scrollbar { display: none; }`}</style>
     </div>
   );
-}
+});
 
 /* ─── Question Map Overlay ───────────────────────────────────── */
 interface QMapProps {
@@ -216,9 +303,9 @@ export default function AttemptPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
   const [saveError, setSaveError] = useState('');
   const [showMap, setShowMap] = useState(false);
+  const [showPython, setShowPython] = useState(false);
   const questionAreaRef = useRef<HTMLDivElement>(null);
 
   // (removed isLargeTest — using horizontal nav for all)
@@ -247,16 +334,6 @@ export default function AttemptPage() {
     }
     load();
   }, [id, token, router]);
-
-  // Timer
-  useEffect(() => {
-    if (!attempt) return;
-    const start = new Date(attempt.started_at).getTime();
-    const interval = setInterval(() => {
-      setElapsed(Math.floor((Date.now() - start) / 1000));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [attempt]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -301,10 +378,12 @@ export default function AttemptPage() {
         question_id: currentQuestion.id,
         answer,
       }, token);
-      setSavedQuestions(prev => new Set(prev).add(currentQuestion.id));
+      const newSaved = new Set(savedQuestions);
+      newSaved.add(currentQuestion.id);
+      setSavedQuestions(newSaved);
       // Auto-advance to next unanswered question
       const nextUnsaved = questions.findIndex(
-        (q, i) => i > currentIdx && !savedQuestions.has(q.id) && q.id !== currentQuestion.id
+        (q, i) => i > currentIdx && !newSaved.has(q.id)
       );
       if (nextUnsaved !== -1) {
         setCurrentIdx(nextUnsaved);
@@ -383,6 +462,46 @@ export default function AttemptPage() {
         background: 'var(--color-surface-2)',
       }}
     >
+      {/* ── Python Panel ───────────────────────────────────────── */}
+      <PythonPanel open={showPython} onClose={() => setShowPython(false)} />
+
+      {/* ── Floating Python button (right edge) ─────────────── */}
+      {!showPython && (
+        <button
+          type="button"
+          onClick={() => setShowPython(true)}
+          title="Открыть Python IDE"
+          style={{
+            position: 'fixed',
+            right: 0,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            zIndex: 45,
+            width: 36,
+            height: 80,
+            borderRadius: '8px 0 0 8px',
+            border: 'none',
+            background: '#306998',
+            color: '#ffd43b',
+            cursor: 'pointer',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.25rem',
+            boxShadow: '-2px 0 8px rgba(0,0,0,0.15)',
+            fontSize: '0.5625rem',
+            fontWeight: 800,
+            letterSpacing: '0.05em',
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
+          </svg>
+          PY
+        </button>
+      )}
+
       {/* ── Question Map Overlay ─────────────────────────────── */}
       {showMap && (
         <QuestionMap
@@ -426,6 +545,20 @@ export default function AttemptPage() {
             <span style={{ color: 'var(--color-text-muted)' }}> / {totalCount}</span>
           </span>
 
+          {/* Python panel toggle */}
+          <button
+            type="button"
+            onClick={() => setShowPython(true)}
+            className="btn btn-ghost btn-sm"
+            style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', gap: '0.25rem' }}
+            title="Python IDE"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
+            </svg>
+            <span className="hidden sm:inline">Python</span>
+          </button>
+
           {/* Map toggle button */}
           <button
             type="button"
@@ -443,29 +576,7 @@ export default function AttemptPage() {
           </button>
 
           {/* Timer */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.375rem',
-              fontVariantNumeric: 'tabular-nums',
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M12 6v6l4 2" />
-            </svg>
-            <span
-              style={{
-                fontFamily: "'SF Mono', 'Fira Mono', monospace",
-                fontSize: '0.9375rem',
-                fontWeight: 600,
-                color: 'var(--color-text-primary)',
-              }}
-            >
-              {formatTime(elapsed)}
-            </span>
-          </div>
+          {attempt && <Timer startedAt={attempt.started_at} />}
         </div>
       </div>
 

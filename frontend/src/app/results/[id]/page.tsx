@@ -89,10 +89,11 @@ export default function ResultsPage() {
     );
   }
 
-  const score = Math.round(attempt.score_percent);
-  const correctCount = attempt.answers.filter(a => a.is_correct).length;
+  const answers = attempt.answers || [];
+  const score = Math.round(attempt.score_percent ?? 0);
+  const correctCount = answers.filter(a => a.is_correct).length;
   const wrongAnswers = questions.filter(q => {
-    const ans = attempt.answers.find(a => a.question_id === q.id);
+    const ans = answers.find(a => a.question_id === q.id);
     return ans && !ans.is_correct;
   });
 
@@ -234,7 +235,7 @@ export default function ResultsPage() {
           {/* Grid of numbered tiles */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem', marginBottom: '1rem' }}>
             {questions.map((q, i) => {
-              const answer = attempt.answers.find(a => a.question_id === q.id);
+              const answer = answers.find(a => a.question_id === q.id);
               const isCorrect = answer?.is_correct;
               const isAnswered = !!answer;
 

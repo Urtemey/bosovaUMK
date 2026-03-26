@@ -24,6 +24,7 @@ class Question(db.Model):
     content = db.Column(db.JSON, nullable=False)
     correct_answer = db.Column(db.JSON, nullable=False)
     points = db.Column(db.Integer, default=1)
+    source_id = db.Column(db.Integer, db.ForeignKey('questions.id'), nullable=True)
 
     answers = db.relationship('Answer', backref='question', lazy='dynamic',
                                cascade='all, delete-orphan')

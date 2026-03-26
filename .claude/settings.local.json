@@ -74,7 +74,10 @@
       "Bash(python:*)",
       "Bash(curl -s http://localhost:5000/api/assignments/by-link/c3d220fbd898)",
       "Bash(npm install:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(npx tsc:*)",
+      "Bash(C:/Users/servak/Downloads/boZoVa/.venv/Scripts/python.exe -m flask db migrate -m \"add source_id to questions\")",
+      "Bash(C:/Users/servak/Downloads/boZoVa/.venv/Scripts/python.exe -m flask db upgrade)"
     ]
   }
 }

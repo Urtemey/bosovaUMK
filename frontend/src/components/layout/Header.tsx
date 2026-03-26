@@ -35,6 +35,14 @@ function IconClasses({ active }: { active: boolean }) {
   );
 }
 
+function IconCode({ active }: { active: boolean }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
+    </svg>
+  );
+}
+
 function IconLogin({ active }: { active: boolean }) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
@@ -130,9 +138,15 @@ export default function Header() {
               <>
                 <Link
                   href="/dashboard"
-                  className={`nav-link ${isActive('/dashboard') && !isActive('/dashboard/classrooms') ? 'active' : ''}`}
+                  className={`nav-link ${isActive('/dashboard') && !isActive('/dashboard/classrooms') && !isActive('/dashboard/questions') ? 'active' : ''}`}
                 >
                   Мои тесты
+                </Link>
+                <Link
+                  href="/dashboard/questions"
+                  className={`nav-link ${isActive('/dashboard/questions') ? 'active' : ''}`}
+                >
+                  Банк заданий
                 </Link>
                 <Link
                   href="/dashboard/classrooms"
@@ -142,6 +156,13 @@ export default function Header() {
                 </Link>
               </>
             )}
+
+            <Link
+              href="/code-editor"
+              className={`nav-link ${isActive('/code-editor') ? 'active' : ''}`}
+            >
+              IDE
+            </Link>
           </nav>
 
           {/* Auth area */}
@@ -282,10 +303,10 @@ export default function Header() {
           <>
             <Link
               href="/dashboard"
-              className={`bottom-nav-item ${isActive('/dashboard') && !isActive('/dashboard/classrooms') ? 'active' : ''}`}
+              className={`bottom-nav-item ${isActive('/dashboard') && !isActive('/dashboard/classrooms') && !isActive('/dashboard/questions') ? 'active' : ''}`}
             >
-              <IconTests active={isActive('/dashboard') && !isActive('/dashboard/classrooms')} />
-              <span>Мои тесты</span>
+              <IconTests active={isActive('/dashboard') && !isActive('/dashboard/classrooms') && !isActive('/dashboard/questions')} />
+              <span>Тесты</span>
             </Link>
             <Link
               href="/dashboard/classrooms"
@@ -313,6 +334,14 @@ export default function Header() {
             </Link>
           </>
         ) : null}
+
+        <Link
+          href="/code-editor"
+          className={`bottom-nav-item ${isActive('/code-editor') ? 'active' : ''}`}
+        >
+          <IconCode active={isActive('/code-editor')} />
+          <span>Python</span>
+        </Link>
       </nav>
 
       {/* ── Responsive display rules ──────────────────────── */}

@@ -72,11 +72,12 @@ export default function ShareLinkPage() {
 
   const handleStart = async () => {
     if (!user && !anonymousName.trim()) return;
+    if (!test || !assignment) return;
     setStarting(true);
     try {
       const body: { test_id: number; assignment_id?: number; anonymous_name?: string } = {
-        test_id: test!.id,
-        assignment_id: assignment!.id,
+        test_id: test.id,
+        assignment_id: assignment.id,
       };
       if (!user) {
         body.anonymous_name = anonymousName.trim();

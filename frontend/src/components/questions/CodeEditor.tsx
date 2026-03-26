@@ -104,10 +104,12 @@ export default function CodeEditor({ content, value, onChange, disabled }: Props
   // Initialize CodeMirror
   useEffect(() => {
     let view: { destroy: () => void } | null = null;
+    let cancelled = false;
 
     (async () => {
       if (!editorRef.current) return;
       const cm = await loadCMModules();
+      if (cancelled || !editorRef.current) return;
 
       const updateListener = cm.EditorView.updateListener.of((update: { docChanged: boolean; state: { doc: { toString: () => string } } }) => {
         if (update.docChanged) {
@@ -143,6 +145,7 @@ export default function CodeEditor({ content, value, onChange, disabled }: Props
     })();
 
     return () => {
+      cancelled = true;
       if (view) view.destroy();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps

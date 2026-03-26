@@ -92,6 +92,29 @@ export const testsApi = {
   },
 };
 
+// Questions (browse)
+export const questionsApi = {
+  browse: (token: string, params?: { grade?: number; topic?: string; question_type?: string; search?: string; page?: number; per_page?: number }) => {
+    const sp = new URLSearchParams();
+    if (params?.grade) sp.set('grade', String(params.grade));
+    if (params?.topic) sp.set('topic', params.topic);
+    if (params?.question_type) sp.set('question_type', params.question_type);
+    if (params?.search) sp.set('search', params.search);
+    if (params?.page) sp.set('page', String(params.page));
+    if (params?.per_page) sp.set('per_page', String(params.per_page));
+    const qs = sp.toString();
+    return apiFetch<{ questions: unknown[]; total: number; page: number; pages: number }>(`/questions${qs ? `?${qs}` : ''}`, { token });
+  },
+  topics: (token: string) =>
+    apiFetch<{ topics: Record<string, string[]> }>('/questions/topics', { token }),
+  addToTest: (token: string, data: { test_id: number; question_ids: number[] }) =>
+    apiFetch<{ added: number }>('/questions/add-to-test', { method: 'POST', body: JSON.stringify(data), token }),
+  get: (token: string, id: number) =>
+    apiFetch(`/questions/${id}`, { token }),
+  update: (token: string, id: number, data: Record<string, unknown>) =>
+    apiFetch(`/questions/${id}`, { method: 'PUT', body: JSON.stringify(data), token }),
+};
+
 // Assignments
 export const assignmentsApi = {
   create: (token: string, data: Record<string, unknown>) =>

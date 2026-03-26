@@ -110,6 +110,7 @@ def duplicate_test(test_id):
             content=q.content,
             correct_answer=q.correct_answer,
             points=q.points,
+            source_id=q.source_id or q.id,
         )
         db.session.add(new_q)
 

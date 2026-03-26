@@ -33,12 +33,14 @@ def create_app(config_class=Config):
     from app.routes.tests import tests_bp
     from app.routes.assignments import assignments_bp
     from app.routes.attempts import attempts_bp
+    from app.routes.questions import questions_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(classrooms_bp, url_prefix='/api/classrooms')
     app.register_blueprint(tests_bp, url_prefix='/api/tests')
     app.register_blueprint(assignments_bp, url_prefix='/api/assignments')
     app.register_blueprint(attempts_bp, url_prefix='/api/attempts')
+    app.register_blueprint(questions_bp, url_prefix='/api/questions')
 
     @app.route('/content-images/<path:filename>')
     def serve_content_image(filename):

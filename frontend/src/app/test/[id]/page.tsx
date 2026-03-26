@@ -397,6 +397,7 @@ export default function TestViewPage() {
       router.push(`/attempt/${attempt.id}`);
     } catch (e) {
       console.error(e);
+      showToast(e instanceof Error ? e.message : 'Не удалось начать тест', 'error');
       setStarting(false);
     }
   };

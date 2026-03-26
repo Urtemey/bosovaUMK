@@ -26,7 +26,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "boZoVa — Тестирование по информатике",
+  title: "УМК Информатика — Тестирование",
   description: "Платформа тестирования по информатике (УМК Босова) для 5–11 классов",
 };
 

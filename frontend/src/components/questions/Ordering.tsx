@@ -66,7 +66,7 @@ export default function Ordering({ content, value, onChange, disabled }: Props) 
       <div className="space-y-2">
         {order.map((itemIdx, pos) => (
           <div
-            key={`${pos}-${itemIdx}`}
+            key={itemIdx}
             draggable={!disabled}
             onDragStart={() => handleDragStart(pos)}
             onDragOver={(e) => handleDragOver(e, pos)}

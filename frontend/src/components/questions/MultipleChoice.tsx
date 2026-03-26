@@ -81,9 +81,10 @@ export default function MultipleChoice({ content, value, onChange, disabled }: P
                   </svg>
                 )}
               </div>
-              <span style={{ fontSize: '0.875rem', color: isSelected ? 'var(--color-text-primary)' : 'var(--color-text-secondary)' }}>
-                {option}
+              <span style={{ fontSize: '0.875rem', color: isSelected ? 'var(--color-text-primary)' : 'var(--color-text-secondary)', flex: 1, overflow: 'hidden' }}>
+                <HtmlContent html={option} style={{ display: 'inline' }} />
               </span>
+              <style>{`label img { max-width: 100%; height: auto; border-radius: 0.5rem; vertical-align: middle; }`}</style>
             </label>
           );
         })}
