@@ -23,7 +23,8 @@ def create_app(config_class=Config):
 
     db.init_app(app)
     migrate.init_app(app, db)
-    CORS(app, resources={r"/api/*": {"origins": "*"}, r"/content-images/*": {"origins": "*"}})
+    allowed_origins = os.getenv('CORS_ORIGINS', '*').split(',')
+    CORS(app, resources={r"/api/*": {"origins": allowed_origins}, r"/content-images/*": {"origins": allowed_origins}})
     jwt.init_app(app)
 
     from app.models import teacher, classroom, student, test, question, assignment, attempt, answer  # noqa: F401
@@ -42,8 +43,11 @@ def create_app(config_class=Config):
     app.register_blueprint(attempts_bp, url_prefix='/api/attempts')
     app.register_blueprint(questions_bp, url_prefix='/api/questions')
 
-    @app.route('/content-images/<path:filename>')
-    def serve_content_image(filename):
-        return send_from_directory(_IMAGES_DIR, filename)
+    # Раздача изображений только для локальной разработки.
+    # В продакшене S3_IMAGES_BASE_URL задан — ссылки ведут на S3 напрямую.
+    if not os.getenv('S3_IMAGES_BASE_URL'):
+        @app.route('/content-images/<path:filename>')
+        def serve_content_image(filename):
+            return send_from_directory(_IMAGES_DIR, filename)
 
     return app

@@ -1,6 +1,10 @@
 """Parser for contenttests HTML format -> list of question dicts."""
+import os
 from bs4 import BeautifulSoup, NavigableString
 import re
+
+_S3_BASE = os.environ.get('S3_IMAGES_BASE_URL', '')
+_IMG_PREFIX = _S3_BASE.rstrip('/') + '/' if _S3_BASE else _IMG_PREFIX
 
 
 def parse_html_questions(html_content: str) -> list[dict]:
@@ -43,7 +47,7 @@ def parse_html_questions(html_content: str) -> list[dict]:
         img = block.find('img')
         image_src = img.get('src') or img.get('originalsrc') or img.get('originalSrc') if img else None
         if image_src and image_src.startswith('images/'):
-            image_src = '/content-images/' + image_src[len('images/'):]
+            image_src = _IMG_PREFIX + image_src[len('images/'):]
 
         # Try each question type in order of specificity
         parsed = (
@@ -233,7 +237,7 @@ def _li_content(li) -> str:
     if img:
         src = img.get('src') or img.get('originalsrc') or ''
         if src.startswith('images/'):
-            src = '/content-images/' + src[len('images/'):]
+            src = _IMG_PREFIX + src[len('images/'):]
         text = li.get_text(strip=True)
         if text:
             return f'{text} <img src="{src}">'
