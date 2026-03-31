@@ -26,7 +26,7 @@ interface Test {
 interface Assignment {
   id: number;
   test_id: number;
-  settings: Record<string, unknown>;
+  settings_override: Record<string, unknown>;
 }
 
 const QUESTION_TYPE_LABELS: Record<string, string> = {
@@ -173,7 +173,7 @@ export default function ShareLinkPage() {
           <div style={{ width: 1, background: 'var(--color-border)' }} />
           <div>
             <div style={{ fontSize: '1.375rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
-              {(assignment.settings.max_attempts as number) || 1}
+              {(assignment.settings_override?.max_attempts as number) || 1}
             </div>
             <div className="t-caption">попыток</div>
           </div>

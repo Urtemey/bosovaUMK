@@ -134,6 +134,15 @@ export default function Header() {
               Каталог
             </Link>
 
+            {user && role === 'student' && (
+              <Link
+                href="/my-assignments"
+                className={`nav-link ${isActive('/my-assignments') ? 'active' : ''}`}
+              >
+                Мои задания
+              </Link>
+            )}
+
             {user && role === 'teacher' && (
               <>
                 <Link
@@ -316,6 +325,14 @@ export default function Header() {
               <span>Классы</span>
             </Link>
           </>
+        ) : user && role === 'student' ? (
+          <Link
+            href="/my-assignments"
+            className={`bottom-nav-item ${isActive('/my-assignments') ? 'active' : ''}`}
+          >
+            <IconTests active={isActive('/my-assignments')} />
+            <span>Задания</span>
+          </Link>
         ) : !user ? (
           <>
             <Link

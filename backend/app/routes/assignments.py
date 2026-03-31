@@ -1,9 +1,10 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from app import db
 from app.models.assignment import TestAssignment
 from app.models.test import Test
 from app.models.classroom import Classroom
+from app.models.student import Student
 
 assignments_bp = Blueprint('assignments', __name__)
 
@@ -41,6 +42,28 @@ def create_assignment():
     db.session.commit()
 
     return jsonify(assignment.to_dict()), 201
+
+
+@assignments_bp.route('/my', methods=['GET'])
+@jwt_required()
+def get_my_assignments():
+    claims = get_jwt()
+    if claims.get('role') != 'student':
+        return jsonify({'error': 'Только для учеников'}), 403
+
+    student_id = int(get_jwt_identity())
+    student = Student.query.get_or_404(student_id)
+
+    assignments = TestAssignment.query.filter_by(classroom_id=student.classroom_id).all()
+    result = []
+    for a in assignments:
+        test = Test.query.get(a.test_id)
+        if test and test.is_published:
+            d = a.to_dict()
+            d['test'] = test.to_dict()
+            result.append(d)
+
+    return jsonify(result)
 
 
 @assignments_bp.route('/by-link/<share_link>', methods=['GET'])

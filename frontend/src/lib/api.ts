@@ -123,6 +123,8 @@ export const assignmentsApi = {
     apiFetch(`/assignments/by-link/${shareLink}`),
   listForClassroom: (token: string, classroomId: number) =>
     apiFetch(`/assignments/classroom/${classroomId}`, { token }),
+  my: (token: string) =>
+    apiFetch('/assignments/my', { token }),
 };
 
 // Attempts
