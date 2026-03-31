@@ -338,9 +338,11 @@ export default function AttemptPage() {
   // Keyboard navigation
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      // Don't intercept if user is typing in an input
-      const tag = (e.target as HTMLElement).tagName;
+      // Don't intercept if user is typing in an input or code editor
+      const el = e.target as HTMLElement;
+      const tag = el.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (el.closest('.cm-editor')) return;
 
       if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
         e.preventDefault();
