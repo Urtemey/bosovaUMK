@@ -126,7 +126,7 @@ export default function CodeEditorPage() {
 
   // Init Web Worker
   useEffect(() => {
-    const worker = new Worker('/pyodide-worker.js');
+    const worker = new Worker(language === 'python' ? '/pyodide-worker.js' : '/cpp-worker-adapter.js');
     workerRef.current = worker;
 
     worker.onmessage = (e) => {
@@ -147,7 +147,6 @@ export default function CodeEditorPage() {
       setRunning(false);
     };
 
-    // Start loading Pyodide in background
     worker.postMessage({ type: 'init', language });
 
     return () => { worker.terminate(); };
@@ -268,7 +267,7 @@ export default function CodeEditorPage() {
     setError('Выполнение прервано');
     setRuntimeReady(false);
 
-    const worker = new Worker('/pyodide-worker.js');
+    const worker = new Worker(language === 'python' ? '/pyodide-worker.js' : '/cpp-worker-adapter.js');
     workerRef.current = worker;
     worker.onmessage = (e) => {
       const { type: msgType, output: out, error: err } = e.data;

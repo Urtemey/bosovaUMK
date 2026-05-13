@@ -1,43 +1,12 @@
-// Web Worker for running code in browser-side runtimes.
-// Python uses Pyodide. C and C++ use JSCPP, a lightweight educational interpreter.
+// Web Worker for running Python code via Pyodide.
 
 let pyodide = null;
-let jscppLoaded = false;
 
 async function initPyodide() {
   if (pyodide) return pyodide;
   importScripts('https://cdn.jsdelivr.net/pyodide/v0.27.5/full/pyodide.js');
   pyodide = await loadPyodide();
   return pyodide;
-}
-
-function initJSCPP() {
-  if (jscppLoaded) return;
-  importScripts('/vendor-jscpp.js');
-  jscppLoaded = true;
-}
-
-function runJSCPP(code, stdin) {
-  initJSCPP();
-  let output = '';
-  const oldLog = console.log;
-  const oldInfo = console.info;
-  const oldWarn = console.warn;
-  const capture = (...args) => {
-    output += args.join(' ') + '\n';
-  };
-  console.log = capture;
-  console.info = capture;
-  console.warn = capture;
-  try {
-    const exitCode = JSCPP.run(code, stdin || '');
-    const suffix = exitCode && exitCode !== 0 ? `\n(program exited with code ${exitCode})` : '';
-    return (output.trim() || '(no output)') + suffix;
-  } finally {
-    console.log = oldLog;
-    console.info = oldInfo;
-    console.warn = oldWarn;
-  }
 }
 
 async function runPython(code, stdin, debug) {
@@ -80,8 +49,7 @@ self.onmessage = async function (e) {
 
   if (type === 'init') {
     try {
-      if (language === 'python') await initPyodide();
-      if (language === 'c' || language === 'cpp') initJSCPP();
+      await initPyodide();
       self.postMessage({ type: 'ready' });
     } catch (err) {
       self.postMessage({ type: 'error', error: 'Failed to load runtime: ' + String(err) });
@@ -98,12 +66,6 @@ self.onmessage = async function (e) {
       try {
         pyodide.runPython('import sys; sys.stdin = sys.__stdin__; sys.stdout = sys.__stdout__; sys.settrace(None)');
       } catch (_) { /* ignore */ }
-      return;
-    }
-
-    if (language === 'c' || language === 'cpp') {
-      const output = runJSCPP(code, stdin);
-      self.postMessage({ type: 'result', output });
       return;
     }
   } catch (err) {
