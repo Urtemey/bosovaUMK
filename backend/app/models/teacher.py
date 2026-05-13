@@ -10,6 +10,7 @@ class Teacher(db.Model):
     login = db.Column(db.String(100), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
     display_name = db.Column(db.String(200), nullable=False)
+    role = db.Column(db.String(20), nullable=False, default='teacher')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     classrooms = db.relationship('Classroom', backref='teacher', lazy='dynamic')
@@ -26,5 +27,7 @@ class Teacher(db.Model):
             'id': self.id,
             'login': self.login,
             'display_name': self.display_name,
+            'role': self.role,
+            'is_admin': self.role == 'admin',
             'created_at': self.created_at.isoformat(),
         }

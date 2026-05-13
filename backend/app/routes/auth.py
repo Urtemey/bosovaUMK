@@ -1,11 +1,12 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import (
     create_access_token, create_refresh_token,
-    jwt_required, get_jwt_identity
+    jwt_required, get_jwt_identity, get_jwt
 )
 from app import db
 from app.models.teacher import Teacher
 from app.models.student import Student
+from app.utils.roles import role_for_teacher
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -28,8 +29,8 @@ def register_teacher():
     db.session.add(teacher)
     db.session.commit()
 
-    access_token = create_access_token(identity=str(teacher.id), additional_claims={'role': 'teacher'})
-    refresh_token = create_refresh_token(identity=str(teacher.id), additional_claims={'role': 'teacher'})
+    access_token = create_access_token(identity=str(teacher.id), additional_claims={'role': role_for_teacher(teacher)})
+    refresh_token = create_refresh_token(identity=str(teacher.id), additional_claims={'role': role_for_teacher(teacher)})
 
     return jsonify({
         'teacher': teacher.to_dict(),
@@ -48,8 +49,8 @@ def login_teacher():
     if not teacher or not teacher.check_password(password):
         return jsonify({'error': 'Неверный логин или пароль'}), 401
 
-    access_token = create_access_token(identity=str(teacher.id), additional_claims={'role': 'teacher'})
-    refresh_token = create_refresh_token(identity=str(teacher.id), additional_claims={'role': 'teacher'})
+    access_token = create_access_token(identity=str(teacher.id), additional_claims={'role': role_for_teacher(teacher)})
+    refresh_token = create_refresh_token(identity=str(teacher.id), additional_claims={'role': role_for_teacher(teacher)})
 
     return jsonify({
         'teacher': teacher.to_dict(),
@@ -80,13 +81,17 @@ def login_student():
 @jwt_required()
 def get_me():
     user_id = int(get_jwt_identity())
-    teacher = Teacher.query.get(user_id)
-    if teacher:
-        return jsonify({'role': 'teacher', 'user': teacher.to_dict()})
+    token_role = get_jwt().get('role')
 
-    student = Student.query.get(user_id)
-    if student:
-        return jsonify({'role': 'student', 'user': student.to_dict()})
+    if token_role in ('admin', 'teacher'):
+        teacher = Teacher.query.get(user_id)
+        if teacher:
+            return jsonify({'role': role_for_teacher(teacher), 'user': teacher.to_dict()})
+
+    if token_role == 'student':
+        student = Student.query.get(user_id)
+        if student:
+            return jsonify({'role': 'student', 'user': student.to_dict()})
 
     return jsonify({'error': 'Пользователь не найден'}), 404
 
@@ -97,9 +102,12 @@ def refresh():
     identity = get_jwt_identity()
     user_id = int(identity)
 
-    teacher = Teacher.query.get(user_id)
-    if teacher:
-        role = 'teacher'
+    token_role = get_jwt().get('role')
+    if token_role in ('admin', 'teacher'):
+        teacher = Teacher.query.get(user_id)
+        if not teacher:
+            return jsonify({'error': 'Пользователь не найден'}), 404
+        role = role_for_teacher(teacher)
     else:
         role = 'student'
 

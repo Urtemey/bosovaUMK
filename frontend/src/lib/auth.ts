@@ -12,9 +12,9 @@ export interface AuthState {
   user: User | null;
   token: string | null;
   refreshToken: string | null;
-  role: 'teacher' | 'student' | null;
+  role: 'admin' | 'teacher' | 'student' | null;
   isLoading: boolean;
-  login: (token: string, refreshToken: string | null, user: User, role: 'teacher' | 'student') => void;
+  login: (token: string, refreshToken: string | null, user: User, role: 'admin' | 'teacher' | 'student') => void;
   logout: () => void;
 }
 

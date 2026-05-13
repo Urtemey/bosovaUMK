@@ -9,7 +9,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [refreshToken, setRefreshToken] = useState<string | null>(null);
-  const [role, setRole] = useState<'teacher' | 'student' | null>(null);
+  const [role, setRole] = useState<'admin' | 'teacher' | 'student' | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Try to refresh the access token using the refresh token
@@ -43,7 +43,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         const meData = await meRes.json();
         setToken(stored.token);
         setRefreshToken(stored.refreshToken);
-        setRole(meData.role as 'teacher' | 'student');
+        setRole(meData.role as 'admin' | 'teacher' | 'student');
         setUser(meData.user);
         // Update localStorage with fresh user data
         storeAuth(stored.token, stored.refreshToken, meData.user, meData.role);
@@ -62,7 +62,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
             const meData = await meRes2.json();
             setToken(newToken);
             setRefreshToken(stored.refreshToken);
-            setRole(meData.role as 'teacher' | 'student');
+            setRole(meData.role as 'admin' | 'teacher' | 'student');
             setUser(meData.user);
             storeAuth(newToken, stored.refreshToken, meData.user, meData.role);
             return;
@@ -79,7 +79,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         try {
           setToken(stored.token);
           setRefreshToken(stored.refreshToken);
-          setRole(stored.role as 'teacher' | 'student');
+          setRole(stored.role as 'admin' | 'teacher' | 'student');
           setUser(JSON.parse(storedUser));
           return;
         } catch { /* ignore */ }
@@ -89,15 +89,25 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   }, [tryRefresh]);
 
   useEffect(() => {
-    const stored = getStoredAuth();
-    if (stored) {
-      validateAndHydrate(stored).finally(() => setIsLoading(false));
-    } else {
-      setIsLoading(false);
+    let cancelled = false;
+
+    async function hydrateAuth() {
+      const stored = getStoredAuth();
+      if (stored) {
+        await validateAndHydrate(stored);
+      }
+      if (!cancelled) {
+        setIsLoading(false);
+      }
     }
+
+    void hydrateAuth();
+    return () => {
+      cancelled = true;
+    };
   }, [validateAndHydrate]);
 
-  const login = (newToken: string, newRefreshToken: string | null, newUser: User, newRole: 'teacher' | 'student') => {
+  const login = (newToken: string, newRefreshToken: string | null, newUser: User, newRole: 'admin' | 'teacher' | 'student') => {
     setToken(newToken);
     setRefreshToken(newRefreshToken);
     setUser(newUser);

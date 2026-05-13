@@ -14,6 +14,7 @@ class TestRegister:
         assert "access_token" in data
         assert "refresh_token" in data
         assert data["teacher"]["login"] == "newteacher"
+        assert data["teacher"]["role"] == "teacher"
 
     def test_register_duplicate_login(self, client, teacher):
         resp = client.post("/api/auth/register", json={
@@ -38,6 +39,7 @@ class TestLogin:
         data = resp.get_json()
         assert "access_token" in data
         assert data["teacher"]["login"] == "testteacher"
+        assert data["teacher"]["role"] == "admin"
 
     def test_login_wrong_password(self, client, teacher):
         resp = client.post("/api/auth/login", json={
@@ -78,7 +80,7 @@ class TestMe:
         resp = client.get("/api/auth/me", headers={"Authorization": f"Bearer {teacher_token}"})
         assert resp.status_code == 200
         data = resp.get_json()
-        assert data["role"] == "teacher"
+        assert data["role"] == "admin"
         assert data["user"]["login"] == "testteacher"
 
     def test_me_requires_auth(self, client):

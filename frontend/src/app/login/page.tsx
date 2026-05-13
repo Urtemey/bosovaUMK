@@ -28,9 +28,10 @@ export default function LoginPage() {
       } else {
         res = await authApi.login({ login, password }) as Record<string, unknown>;
       }
-      const teacher = res.teacher as { id: number; login: string; display_name: string };
-      auth.login(res.access_token as string, (res.refresh_token as string) || null, teacher, 'teacher');
-      router.push('/dashboard');
+      const teacher = res.teacher as { id: number; login: string; display_name: string; role?: 'admin' | 'teacher' };
+      const role = teacher.role || 'teacher';
+      auth.login(res.access_token as string, (res.refresh_token as string) || null, teacher, role);
+      router.push(role === 'admin' ? '/dashboard' : '/dashboard/classrooms');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Произошла ошибка');
     } finally {

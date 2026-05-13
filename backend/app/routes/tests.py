@@ -1,11 +1,12 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required
 from app import db
 from app.models.test import Test
 from app.models.question import Question, QuestionType
 from app.models.answer import Answer
 from app.models.attempt import TestAttempt
 from app.models.assignment import TestAssignment
+from app.utils.roles import require_role
 
 tests_bp = Blueprint('tests', __name__)
 
@@ -24,7 +25,9 @@ def list_tests():
 @tests_bp.route('/my', methods=['GET'])
 @jwt_required()
 def list_my_tests():
-    teacher_id = int(get_jwt_identity())
+    teacher_id, error = require_role('admin')
+    if error:
+        return error
     tests = Test.query.filter_by(created_by=teacher_id).order_by(Test.grade, Test.id).all()
     return jsonify([t.to_dict() for t in tests])
 
@@ -38,7 +41,9 @@ def get_test(test_id):
 @tests_bp.route('', methods=['POST'])
 @jwt_required()
 def create_test():
-    teacher_id = int(get_jwt_identity())
+    teacher_id, error = require_role('admin')
+    if error:
+        return error
     data = request.get_json()
 
     title = data.get('title', '').strip()
@@ -63,7 +68,9 @@ def create_test():
 @tests_bp.route('/<int:test_id>', methods=['PUT'])
 @jwt_required()
 def update_test(test_id):
-    teacher_id = int(get_jwt_identity())
+    teacher_id, error = require_role('admin')
+    if error:
+        return error
     test = Test.query.filter_by(id=test_id, created_by=teacher_id).first_or_404()
 
     data = request.get_json()
@@ -87,7 +94,9 @@ def update_test(test_id):
 @tests_bp.route('/<int:test_id>/duplicate', methods=['POST'])
 @jwt_required()
 def duplicate_test(test_id):
-    teacher_id = int(get_jwt_identity())
+    teacher_id, error = require_role('admin')
+    if error:
+        return error
     original = Test.query.get_or_404(test_id)
 
     new_test = Test(
@@ -121,7 +130,9 @@ def duplicate_test(test_id):
 @tests_bp.route('/<int:test_id>', methods=['DELETE'])
 @jwt_required()
 def delete_test(test_id):
-    teacher_id = int(get_jwt_identity())
+    teacher_id, error = require_role('admin')
+    if error:
+        return error
     test = Test.query.filter_by(id=test_id, created_by=teacher_id).first_or_404()
 
     # Delete answers for all attempts of this test
@@ -150,7 +161,9 @@ def delete_test(test_id):
 @tests_bp.route('/<int:test_id>/questions', methods=['POST'])
 @jwt_required()
 def add_question(test_id):
-    teacher_id = int(get_jwt_identity())
+    teacher_id, error = require_role('admin')
+    if error:
+        return error
     test = Test.query.filter_by(id=test_id, created_by=teacher_id).first_or_404()
 
     data = request.get_json()
@@ -177,7 +190,9 @@ def add_question(test_id):
 @tests_bp.route('/<int:test_id>/questions/<int:question_id>', methods=['PUT'])
 @jwt_required()
 def update_question(test_id, question_id):
-    teacher_id = int(get_jwt_identity())
+    teacher_id, error = require_role('admin')
+    if error:
+        return error
     Test.query.filter_by(id=test_id, created_by=teacher_id).first_or_404()
     question = Question.query.filter_by(id=question_id, test_id=test_id).first_or_404()
 
@@ -201,7 +216,9 @@ def import_from_html():
     """Import questions from contenttests HTML file. Accepts multipart/form-data or JSON."""
     from app.services.html_importer import parse_html_questions
 
-    teacher_id = int(get_jwt_identity())
+    teacher_id, error = require_role('admin')
+    if error:
+        return error
 
     if request.content_type and 'multipart/form-data' in request.content_type:
         file = request.files.get('file')
@@ -261,7 +278,9 @@ def import_from_html():
 @tests_bp.route('/<int:test_id>/questions/<int:question_id>', methods=['DELETE'])
 @jwt_required()
 def delete_question(test_id, question_id):
-    teacher_id = int(get_jwt_identity())
+    teacher_id, error = require_role('admin')
+    if error:
+        return error
     Test.query.filter_by(id=test_id, created_by=teacher_id).first_or_404()
     question = Question.query.filter_by(id=question_id, test_id=test_id).first_or_404()
 

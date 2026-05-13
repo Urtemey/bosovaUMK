@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup, NavigableString
 import re
 
 _S3_BASE = os.environ.get('S3_IMAGES_BASE_URL', '')
-_IMG_PREFIX = _S3_BASE.rstrip('/') + '/' if _S3_BASE else _IMG_PREFIX
+_IMG_PREFIX = _S3_BASE.rstrip('/') + '/' if _S3_BASE else '/content-images/'
 
 
 def parse_html_questions(html_content: str) -> list[dict]:

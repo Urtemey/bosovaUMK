@@ -158,7 +158,7 @@ def seed():
             return
 
         # Create demo teacher
-        teacher = Teacher(login='teacher', display_name='Демо Учитель')
+        teacher = Teacher(login='teacher', role='admin', display_name='Демо Учитель')
         teacher.set_password('teacher123')
         db.session.add(teacher)
         db.session.flush()

@@ -60,14 +60,14 @@ export default function QuestionBrowserPage() {
 
   // Load topics
   useEffect(() => {
-    if (!token || role !== 'teacher') return;
+    if (!token || role !== 'admin') return;
     questionsApi.topics(token).then(res => setTopics(res.topics)).catch(() => {});
     testsApi.my(token).then(res => setMyTests(res as MyTest[])).catch(() => {});
   }, [token, role]);
 
   // Load questions
   const loadQuestions = useCallback(async () => {
-    if (!token || role !== 'teacher') return;
+    if (!token || role !== 'admin') return;
     setLoading(true);
     try {
       const res = await questionsApi.browse(token, {
@@ -135,7 +135,7 @@ export default function QuestionBrowserPage() {
     setPage(1);
   };
 
-  if (role !== 'teacher') {
+  if (role !== 'admin') {
     return (
       <div style={{ padding: '4rem 1.5rem', textAlign: 'center' }}>
         <p className="t-body">Доступ только для учителей</p>

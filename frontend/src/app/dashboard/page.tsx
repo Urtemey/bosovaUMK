@@ -140,7 +140,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!token || role !== 'teacher') {
+    if (!token || role !== 'admin') {
       router.push('/login');
       return;
     }

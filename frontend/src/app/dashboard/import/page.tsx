@@ -24,7 +24,7 @@ export default function ImportPage() {
 
   if (!mounted) return null;
 
-  if (role !== 'teacher') {
+  if (role !== 'admin') {
     router.push('/login');
     return null;
   }

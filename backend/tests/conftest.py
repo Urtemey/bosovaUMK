@@ -45,7 +45,7 @@ def client(app):
 
 @pytest.fixture
 def teacher(db):
-    t = Teacher(login="testteacher", display_name="Test Teacher")
+    t = Teacher(login="testteacher", display_name="Test Teacher", role="admin")
     t.set_password("pass123")
     db.session.add(t)
     db.session.commit()
@@ -68,7 +68,7 @@ def classroom(db, teacher):
 
 @pytest.fixture
 def student(db, classroom):
-    s = Student(display_name="Иван Иванов", classroom_id=classroom.id)
+    s = Student(display_name="Test Student", login="STUDENT1", code="123456", classroom_id=classroom.id)
     db.session.add(s)
     db.session.commit()
     return s

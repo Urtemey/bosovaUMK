@@ -1,18 +1,15 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
+from flask_jwt_extended import jwt_required
 from app import db
 from app.models.question import Question, QuestionType
 from app.models.test import Test
+from app.utils.roles import require_role
 
 questions_bp = Blueprint('questions', __name__)
 
 
-def _require_teacher():
-    """Verify the current JWT belongs to a teacher. Returns teacher_id or aborts."""
-    claims = get_jwt()
-    if claims.get('role') != 'teacher':
-        return None
-    return int(get_jwt_identity())
+def _require_admin():
+    return require_role('admin')
 
 
 @questions_bp.route('', methods=['GET'])
@@ -28,9 +25,9 @@ def list_questions():
         page (int) - page number, default 1
         per_page (int) - items per page, default 50, max 100
     """
-    teacher_id = _require_teacher()
-    if teacher_id is None:
-        return jsonify({'error': 'Доступ только для учителей'}), 403
+    teacher_id, error = _require_admin()
+    if error:
+        return error
 
     page = request.args.get('page', 1, type=int)
     per_page = min(request.args.get('per_page', 50, type=int), 100)
@@ -99,9 +96,9 @@ def list_questions():
 @jwt_required()
 def get_question(question_id):
     """Get a single question with correct answer (for editing)."""
-    teacher_id = _require_teacher()
-    if teacher_id is None:
-        return jsonify({'error': 'Доступ только для учителей'}), 403
+    teacher_id, error = _require_admin()
+    if error:
+        return error
 
     q = Question.query.get_or_404(question_id)
     t = Test.query.get(q.test_id)
@@ -120,9 +117,9 @@ def get_question(question_id):
 @jwt_required()
 def update_question(question_id):
     """Update a question and propagate changes to all linked copies."""
-    teacher_id = _require_teacher()
-    if teacher_id is None:
-        return jsonify({'error': 'Доступ только для учителей'}), 403
+    teacher_id, error = _require_admin()
+    if error:
+        return error
 
     q = Question.query.get_or_404(question_id)
     data = request.get_json()
@@ -166,9 +163,9 @@ def add_to_test():
         test_id (int) - target test ID (must be owned by current teacher)
         question_ids (list[int]) - IDs of questions to copy
     """
-    teacher_id = _require_teacher()
-    if teacher_id is None:
-        return jsonify({'error': 'Доступ только для учителей'}), 403
+    teacher_id, error = _require_admin()
+    if error:
+        return error
 
     data = request.get_json()
     if not data:
@@ -224,9 +221,9 @@ def list_topics():
 
     Returns: { topics: { "5": ["topic1", ...], "6": [...], ... } }
     """
-    teacher_id = _require_teacher()
-    if teacher_id is None:
-        return jsonify({'error': 'Доступ только для учителей'}), 403
+    teacher_id, error = _require_admin()
+    if error:
+        return error
 
     # Query distinct grade/topic pairs where topic is not null
     rows = (

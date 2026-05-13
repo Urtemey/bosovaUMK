@@ -997,7 +997,7 @@ export default function EditTestPage() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!token || role !== 'teacher') {
+    if (!token || role !== 'admin') {
       router.push('/login');
       return;
     }

@@ -36,7 +36,7 @@ export default function ClassroomsPage() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!token || role !== 'teacher') {
+    if (!token || (role !== 'teacher' && role !== 'admin')) {
       router.push('/login');
       return;
     }

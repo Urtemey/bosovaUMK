@@ -29,7 +29,7 @@ export default function NewTestPage() {
   useEffect(() => { setMounted(true); }, []);
   if (!mounted || authLoading) return null;
 
-  if (!token || role !== 'teacher') {
+  if (!token || role !== 'admin') {
     router.push('/login');
     return null;
   }

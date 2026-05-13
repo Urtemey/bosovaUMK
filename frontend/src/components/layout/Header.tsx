@@ -143,20 +143,24 @@ export default function Header() {
               </Link>
             )}
 
-            {user && role === 'teacher' && (
+            {user && (role === 'teacher' || role === 'admin') && (
               <>
-                <Link
-                  href="/dashboard"
-                  className={`nav-link ${isActive('/dashboard') && !isActive('/dashboard/classrooms') && !isActive('/dashboard/questions') ? 'active' : ''}`}
-                >
-                  Мои тесты
-                </Link>
-                <Link
-                  href="/dashboard/questions"
-                  className={`nav-link ${isActive('/dashboard/questions') ? 'active' : ''}`}
-                >
-                  Банк заданий
-                </Link>
+                {role === 'admin' && (
+                  <>
+                    <Link
+                      href="/dashboard"
+                      className={`nav-link ${isActive('/dashboard') && !isActive('/dashboard/classrooms') && !isActive('/dashboard/questions') ? 'active' : ''}`}
+                    >
+                      Мои тесты
+                    </Link>
+                    <Link
+                      href="/dashboard/questions"
+                      className={`nav-link ${isActive('/dashboard/questions') ? 'active' : ''}`}
+                    >
+                      Банк заданий
+                    </Link>
+                  </>
+                )}
                 <Link
                   href="/dashboard/classrooms"
                   className={`nav-link ${isActive('/dashboard/classrooms') ? 'active' : ''}`}
@@ -178,7 +182,7 @@ export default function Header() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexShrink: 0 }}>
             {user ? (
               <>
-                {role === 'teacher' && (
+                {role === 'admin' && (
                   <Link href="/dashboard/tests/new" className="btn btn-sm btn-cta">
                     + Создать тест
                   </Link>
@@ -308,15 +312,17 @@ export default function Header() {
           <span>Каталог</span>
         </Link>
 
-        {user && role === 'teacher' ? (
+        {user && (role === 'teacher' || role === 'admin') ? (
           <>
-            <Link
-              href="/dashboard"
-              className={`bottom-nav-item ${isActive('/dashboard') && !isActive('/dashboard/classrooms') && !isActive('/dashboard/questions') ? 'active' : ''}`}
-            >
-              <IconTests active={isActive('/dashboard') && !isActive('/dashboard/classrooms') && !isActive('/dashboard/questions')} />
-              <span>Тесты</span>
-            </Link>
+            {role === 'admin' && (
+              <Link
+                href="/dashboard"
+                className={`bottom-nav-item ${isActive('/dashboard') && !isActive('/dashboard/classrooms') && !isActive('/dashboard/questions') ? 'active' : ''}`}
+              >
+                <IconTests active={isActive('/dashboard') && !isActive('/dashboard/classrooms') && !isActive('/dashboard/questions')} />
+                <span>Тесты</span>
+              </Link>
+            )}
             <Link
               href="/dashboard/classrooms"
               className={`bottom-nav-item ${isActive('/dashboard/classrooms') ? 'active' : ''}`}

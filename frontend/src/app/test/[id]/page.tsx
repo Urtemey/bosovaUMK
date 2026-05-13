@@ -490,7 +490,7 @@ export default function TestViewPage() {
       </div>
 
       {/* Teacher note */}
-      {role === 'teacher' && (
+      {(role === 'teacher' || role === 'admin') && (
         <div className="alert alert-info" style={{ marginBottom: '1.5rem' }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
             <circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" />
@@ -500,7 +500,7 @@ export default function TestViewPage() {
       )}
 
       {/* Teacher actions */}
-      {role === 'teacher' && token && (
+      {(role === 'teacher' || role === 'admin') && token && (
         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
           <button
             type="button"
@@ -510,21 +510,25 @@ export default function TestViewPage() {
           >
             Выдать тест
           </button>
-          <Link
-            href={`/dashboard/tests/${test.id}/edit`}
-            className="btn btn-secondary"
-            style={{ flex: 1, textDecoration: 'none', textAlign: 'center' }}
-          >
-            Редактировать
-          </Link>
-          <button
-            type="button"
-            className="btn btn-ghost"
-            onClick={handleDuplicate}
-            disabled={duplicating}
-          >
-            {duplicating ? 'Копирование...' : 'Дублировать'}
-          </button>
+          {role === 'admin' && (
+            <>
+              <Link
+                href={`/dashboard/tests/${test.id}/edit`}
+                className="btn btn-secondary"
+                style={{ flex: 1, textDecoration: 'none', textAlign: 'center' }}
+              >
+                Редактировать
+              </Link>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={handleDuplicate}
+                disabled={duplicating}
+              >
+                {duplicating ? 'Копирование...' : 'Дублировать'}
+              </button>
+            </>
+          )}
         </div>
       )}
 

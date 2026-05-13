@@ -15,6 +15,9 @@ interface Test {
 
 const GRADES = [5, 6, 7, 8, 9, 10, 11];
 
+const EXAM_CATALOG_RE = /(vpr|oge|ege|\u0432\u043f\u0440|\u043e\u0433\u044d|\u0435\u0433\u044d)/i;
+
+
 const GRADE_BG: Record<number, string> = {
   5: '#edf2f9',
   6: '#eef4fb',
@@ -133,8 +136,11 @@ export default function HomePage() {
     async function load() {
       try {
         const all = (await testsApi.list()) as Test[];
+        const visibleTests = role === 'student'
+          ? all.filter((test) => EXAM_CATALOG_RE.test(`${test.title} ${test.topic || ''}`))
+          : all;
         const grouped: Record<number, Test[]> = {};
-        for (const t of all) {
+        for (const t of visibleTests) {
           if (!grouped[t.grade]) grouped[t.grade] = [];
           grouped[t.grade].push(t);
         }
@@ -146,7 +152,7 @@ export default function HomePage() {
       }
     }
     load();
-  }, []);
+  }, [role]);
 
   const tests = testsByGrade[selectedGrade] || [];
   const gradeColor = GRADE_COLOR[selectedGrade] ?? '#2b4c7e';
@@ -195,10 +201,10 @@ export default function HomePage() {
                 </div>
               )}
 
-              {user && role === 'teacher' && (
+              {user && (role === 'teacher' || role === 'admin') && (
                 <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                  <Link href="/dashboard" className="btn btn-lg btn-cta">
-                    Мои тесты
+                  <Link href={role === 'admin' ? '/dashboard' : '/'} className="btn btn-lg btn-cta">
+                    {role === 'admin' ? 'Мои тесты' : 'Каталог'}
                   </Link>
                   <Link href="/dashboard/classrooms" className="btn btn-lg btn-outline-white">
                     Мои классы

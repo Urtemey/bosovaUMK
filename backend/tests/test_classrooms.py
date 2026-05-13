@@ -64,10 +64,7 @@ class TestStudentManagement:
 
     def test_add_student_batch(self, client, classroom, teacher_token):
         resp = client.post(f"/api/classrooms/{classroom.id}/students/batch",
-                           json={"students": [
-                               {"display_name": "Алёнов Алёша"},
-                               {"display_name": "Беляев Борис"},
-                           ]},
+                           json={"names": ["Student One", "Student Two"]},
                            headers={"Authorization": f"Bearer {teacher_token}"})
         assert resp.status_code == 201
         data = resp.get_json()
