@@ -47,9 +47,11 @@ function loadCMModules(): Promise<CMModules> {
 type EditorLanguage = 'python' | 'cpp' | 'c';
 
 const LANGUAGE_STORAGE_KEY = 'code-editor-language';
-const STORAGE_KEY_PREFIX = 'code-editor-code';
+const STORAGE_KEY_PREFIX = 'code-editor-code-v2';
 const THEME_KEY = 'python-editor-theme';
-const DEFAULT_CODE = `# Напишите код на Python\nprint("Привет, мир!")\n`;
+const DEFAULT_CODE = `# Write Python code here
+print("Hello, world!")
+`;
 
 
 const LANGUAGE_OPTIONS: Record<EditorLanguage, { label: string; fileName: string; statusName: string; defaultCode: string }> = {
@@ -58,14 +60,14 @@ const LANGUAGE_OPTIONS: Record<EditorLanguage, { label: string; fileName: string
 using namespace std;
 
 int main() {
-    cout << "??????, ???!" << endl;
+    cout << "Hello, world!" << endl;
     return 0;
 }
 ` },
   c: { label: 'C', fileName: 'main.c', statusName: 'JSCPP', defaultCode: `#include <stdio.h>
 
 int main() {
-    printf("??????, ???!\\n");
+    printf("Hello, world!\\n");
     return 0;
 }
 ` },
@@ -447,7 +449,7 @@ export default function CodeEditorPage() {
           fontSize: '0.6875rem',
           color: runtimeReady ? '#2b8a55' : '#c07b22',
         }}>
-          {runtimeReady ? `? ${LANGUAGE_OPTIONS[language].statusName}` : '? ????????...'}
+          {runtimeReady ? `ready: ${LANGUAGE_OPTIONS[language].statusName}` : 'loading...'}
         </span>
       </div>
 

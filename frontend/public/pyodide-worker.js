@@ -32,7 +32,7 @@ function runJSCPP(code, stdin) {
   try {
     const exitCode = JSCPP.run(code, stdin || '');
     const suffix = exitCode && exitCode !== 0 ? `\n(program exited with code ${exitCode})` : '';
-    return (output.trim() || '(??? ??????)') + suffix;
+    return (output.trim() || '(no output)') + suffix;
   } finally {
     console.log = oldLog;
     console.info = oldInfo;
@@ -67,12 +67,12 @@ sys.settrace(_tracer)
     py.runPython('sys.settrace(None)');
     const stdout = py.runPython('_stdout_capture.getvalue()');
     const debugLog = py.runPython('_debug_log.getvalue()');
-    return ((debugLog ? '--- Debug trace ---\n' + debugLog + '\n--- Output ---\n' : '') + (stdout || '(??? ??????)')).trim();
+    return ((debugLog ? '--- Debug trace ---\n' + debugLog + '\n--- Output ---\n' : '') + (stdout || '(no output)')).trim();
   }
 
   py.runPython(code);
   const stdout = py.runPython('_stdout_capture.getvalue()');
-  return (stdout || '').trim() || '(??? ??????)';
+  return (stdout || '').trim() || '(no output)';
 }
 
 self.onmessage = async function (e) {
@@ -84,7 +84,7 @@ self.onmessage = async function (e) {
       if (language === 'c' || language === 'cpp') initJSCPP();
       self.postMessage({ type: 'ready' });
     } catch (err) {
-      self.postMessage({ type: 'error', error: '?? ??????? ????????? runtime: ' + String(err) });
+      self.postMessage({ type: 'error', error: 'Failed to load runtime: ' + String(err) });
     }
     return;
   }
