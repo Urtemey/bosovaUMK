@@ -54,11 +54,20 @@ def get_my_assignments():
     student_id = int(get_jwt_identity())
     student = Student.query.get_or_404(student_id)
 
-    assignments = TestAssignment.query.filter_by(classroom_id=student.classroom_id).all()
+    assignments = TestAssignment.query.filter(
+        db.or_(
+            TestAssignment.student_id == student.id,
+            db.and_(
+                TestAssignment.classroom_id == student.classroom_id,
+                TestAssignment.student_id.is_(None),
+            ),
+        )
+    ).order_by(TestAssignment.created_at.desc()).all()
+
     result = []
     for a in assignments:
         test = Test.query.get(a.test_id)
-        if test and test.is_published:
+        if test:
             d = a.to_dict()
             d['test'] = test.to_dict()
             result.append(d)

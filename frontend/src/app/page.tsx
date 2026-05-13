@@ -15,7 +15,7 @@ interface Test {
 
 const GRADES = [5, 6, 7, 8, 9, 10, 11];
 
-const EXAM_CATALOG_RE = /(vpr|oge|ege|\u0432\u043f\u0440|\u043e\u0433\u044d|\u0435\u0433\u044d)/i;
+const EXAM_CATALOG_RE = /(vpr|oge|ege|\u0432\u043f\u0440|\u043e\u0433\u044d|\u0435\u0433\u044d|\u043f\u043e\u0434\u0433\u043e\u0442\u043e\u0432\u043a\u0430)/i;
 
 
 const GRADE_BG: Record<number, string> = {
