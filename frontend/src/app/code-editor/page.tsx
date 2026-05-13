@@ -7,6 +7,7 @@ interface CMModules {
   EditorView: typeof import('@codemirror/view').EditorView;
   basicSetup: typeof import('codemirror').basicSetup;
   python: typeof import('@codemirror/lang-python').python;
+  cpp: typeof import('@codemirror/lang-cpp').cpp;
   oneDark: typeof import('@codemirror/theme-one-dark').oneDark;
   EditorState: typeof import('@codemirror/state').EditorState;
   keymap: typeof import('@codemirror/view').keymap;
@@ -19,9 +20,10 @@ let cmModulesPromise: Promise<CMModules> | null = null;
 function loadCMModules(): Promise<CMModules> {
   if (cmModulesPromise) return cmModulesPromise;
   cmModulesPromise = (async () => {
-    const [cm, langPy, theme, state, view, commands] = await Promise.all([
+    const [cm, langPy, langCpp, theme, state, view, commands] = await Promise.all([
       import('codemirror'),
       import('@codemirror/lang-python'),
+      import('@codemirror/lang-cpp'),
       import('@codemirror/theme-one-dark'),
       import('@codemirror/state'),
       import('@codemirror/view'),
@@ -31,6 +33,7 @@ function loadCMModules(): Promise<CMModules> {
       EditorView: view.EditorView,
       basicSetup: cm.basicSetup,
       python: langPy.python,
+      cpp: langCpp.cpp,
       oneDark: theme.oneDark,
       EditorState: state.EditorState,
       keymap: view.keymap,
@@ -41,15 +44,52 @@ function loadCMModules(): Promise<CMModules> {
   return cmModulesPromise;
 }
 
-const STORAGE_KEY = 'python-editor-code';
+type EditorLanguage = 'python' | 'cpp' | 'c';
+
+const LANGUAGE_STORAGE_KEY = 'code-editor-language';
+const STORAGE_KEY_PREFIX = 'code-editor-code';
 const THEME_KEY = 'python-editor-theme';
 const DEFAULT_CODE = `# Напишите код на Python\nprint("Привет, мир!")\n`;
+
+
+const LANGUAGE_OPTIONS: Record<EditorLanguage, { label: string; fileName: string; statusName: string; defaultCode: string }> = {
+  python: { label: 'Python', fileName: 'main.py', statusName: 'Pyodide', defaultCode: DEFAULT_CODE },
+  cpp: { label: 'C++', fileName: 'main.cpp', statusName: 'JSCPP', defaultCode: `#include <iostream>
+using namespace std;
+
+int main() {
+    cout << "??????, ???!" << endl;
+    return 0;
+}
+` },
+  c: { label: 'C', fileName: 'main.c', statusName: 'JSCPP', defaultCode: `#include <stdio.h>
+
+int main() {
+    printf("??????, ???!\\n");
+    return 0;
+}
+` },
+};
+
+function storageKeyFor(language: EditorLanguage) {
+  return `${STORAGE_KEY_PREFIX}-${language}`;
+}
+
+function isEditorLanguage(value: string | null): value is EditorLanguage {
+  return value === 'python' || value === 'cpp' || value === 'c';
+}
+
+function languageExtension(cm: CMModules, language: EditorLanguage) {
+  if (language === 'python') return cm.python();
+  return cm.cpp();
+}
 
 export default function CodeEditorPage() {
   const editorRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const viewRef = useRef<any>(null);
   const themeCompRef = useRef<{ reconfigure: (ext: unknown) => unknown } | null>(null);
+  const languageCompRef = useRef<{ reconfigure: (ext: unknown) => unknown } | null>(null);
   const codeRef = useRef<string>('');
   const workerRef = useRef<Worker | null>(null);
   const mountedRef = useRef(false);
@@ -57,18 +97,30 @@ export default function CodeEditorPage() {
   const [output, setOutput] = useState('');
   const [error, setError] = useState('');
   const [running, setRunning] = useState(false);
-  const [pyReady, setPyReady] = useState(false);
+  const [runtimeReady, setRuntimeReady] = useState(false);
+  const [language, setLanguage] = useState<EditorLanguage>(() => {
+    if (typeof window === 'undefined') return 'python';
+    const savedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    return isEditorLanguage(savedLanguage) ? savedLanguage : 'python';
+  });
+  const languageRef = useRef<EditorLanguage>(language);
   const [editorReady, setEditorReady] = useState(false);
   const [execTime, setExecTime] = useState<number | null>(null);
   const [stdinInput, setStdinInput] = useState('');
-  const [darkTheme, setDarkTheme] = useState(true);
+  const [darkTheme, setDarkTheme] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return localStorage.getItem(THEME_KEY) !== 'light';
+  });
 
   // Load saved code & theme
   useEffect(() => {
-    codeRef.current = localStorage.getItem(STORAGE_KEY) || DEFAULT_CODE;
-    const savedTheme = localStorage.getItem(THEME_KEY);
-    if (savedTheme === 'light') setDarkTheme(false);
+    const initialLanguage = languageRef.current;
+    codeRef.current = localStorage.getItem(storageKeyFor(initialLanguage)) || LANGUAGE_OPTIONS[initialLanguage].defaultCode;
   }, []);
+
+  useEffect(() => {
+    languageRef.current = language;
+  }, [language]);
 
   // Init Web Worker
   useEffect(() => {
@@ -78,7 +130,7 @@ export default function CodeEditorPage() {
     worker.onmessage = (e) => {
       const { type: msgType, output: out, error: err } = e.data;
       if (msgType === 'ready') {
-        setPyReady(true);
+        setRuntimeReady(true);
       } else if (msgType === 'result') {
         setOutput(out || '');
         setRunning(false);
@@ -94,10 +146,10 @@ export default function CodeEditorPage() {
     };
 
     // Start loading Pyodide in background
-    worker.postMessage({ type: 'init' });
+    worker.postMessage({ type: 'init', language });
 
     return () => { worker.terminate(); };
-  }, []);
+  }, [language]);
 
   // Init CodeMirror — only once
   useEffect(() => {
@@ -114,13 +166,15 @@ export default function CodeEditorPage() {
       if (!editorRef.current) return;
 
       const themeComp = new cm.Compartment();
+      const languageComp = new cm.Compartment();
       themeCompRef.current = themeComp as unknown as { reconfigure: (ext: unknown) => unknown };
+      languageCompRef.current = languageComp as unknown as { reconfigure: (ext: unknown) => unknown };
 
       const updateListener = cm.EditorView.updateListener.of((update: { docChanged: boolean; state: { doc: { toString: () => string } } }) => {
         if (update.docChanged) {
           const code = update.state.doc.toString();
           codeRef.current = code;
-          localStorage.setItem(STORAGE_KEY, code);
+          localStorage.setItem(storageKeyFor(languageRef.current), code);
         }
       });
 
@@ -138,7 +192,7 @@ export default function CodeEditorPage() {
         doc: codeRef.current,
         extensions: [
           cm.basicSetup,
-          cm.python(),
+          languageComp.of(languageExtension(cm, language)),
           themeComp.of(isDark ? cm.oneDark : lightTheme),
           cm.keymap.of([cm.indentWithTab]),
           updateListener,
@@ -201,8 +255,8 @@ export default function CodeEditorPage() {
       if (origHandler) origHandler.call(worker, e);
     };
 
-    worker.postMessage({ type: 'run', code: codeRef.current, stdin: stdinInput, debug });
-  }, [running, stdinInput]);
+    worker.postMessage({ type: 'run', language, code: codeRef.current, stdin: stdinInput, debug });
+  }, [running, stdinInput, language]);
 
   const stopCode = useCallback(() => {
     if (!running || !workerRef.current) return;
@@ -210,21 +264,44 @@ export default function CodeEditorPage() {
     workerRef.current.terminate();
     setRunning(false);
     setError('Выполнение прервано');
-    setPyReady(false);
+    setRuntimeReady(false);
 
     const worker = new Worker('/pyodide-worker.js');
     workerRef.current = worker;
     worker.onmessage = (e) => {
       const { type: msgType, output: out, error: err } = e.data;
-      if (msgType === 'ready') setPyReady(true);
+      if (msgType === 'ready') setRuntimeReady(true);
       else if (msgType === 'result') { setOutput(out || ''); setRunning(false); }
       else if (msgType === 'error') { setError(err || 'Ошибка'); setRunning(false); }
     };
     worker.onerror = () => { setError('Worker ошибка'); setRunning(false); };
-    worker.postMessage({ type: 'init' });
-  }, [running]);
+    worker.postMessage({ type: 'init', language });
+  }, [running, language]);
 
   const clearOutput = () => { setOutput(''); setError(''); setExecTime(null); };
+
+  const changeLanguage = useCallback(async (nextLanguage: EditorLanguage) => {
+    if (nextLanguage === language) return;
+    const currentCode = viewRef.current?.state?.doc?.toString?.() || codeRef.current;
+    localStorage.setItem(storageKeyFor(language), currentCode);
+
+    const nextCode = localStorage.getItem(storageKeyFor(nextLanguage)) || LANGUAGE_OPTIONS[nextLanguage].defaultCode;
+    codeRef.current = nextCode;
+    setLanguage(nextLanguage);
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, nextLanguage);
+    setOutput('');
+    setError('');
+    setExecTime(null);
+    setRuntimeReady(false);
+
+    if (viewRef.current && languageCompRef.current) {
+      const cm = await loadCMModules();
+      viewRef.current.dispatch({
+        changes: { from: 0, to: viewRef.current.state.doc.length, insert: nextCode },
+        effects: languageCompRef.current.reconfigure(languageExtension(cm, nextLanguage)),
+      });
+    }
+  }, [language]);
 
   // Colors based on theme
   const bg = darkTheme ? '#1e1e2e' : '#ffffff';
@@ -252,10 +329,24 @@ export default function CodeEditorPage() {
         <span style={{
           fontWeight: 800, fontSize: '0.875rem', color: textPrimary,
           fontFamily: 'var(--font-display), serif',
-          marginRight: 'auto',
         }}>
-          Python IDE
+          IDE
         </span>
+
+        <select
+          value={language}
+          onChange={(e) => changeLanguage(e.target.value as EditorLanguage)}
+          disabled={running}
+          style={{
+            marginRight: 'auto', padding: '0.35rem 0.625rem', borderRadius: 8,
+            border: `1px solid ${border}`, background: bg, color: textPrimary,
+            fontSize: '0.8125rem', fontWeight: 700, cursor: running ? 'not-allowed' : 'pointer',
+          }}
+        >
+          {(Object.keys(LANGUAGE_OPTIONS) as EditorLanguage[]).map((key) => (
+            <option key={key} value={key}>{LANGUAGE_OPTIONS[key].label}</option>
+          ))}
+        </select>
 
         {/* Run */}
         <button
@@ -351,12 +442,12 @@ export default function CodeEditorPage() {
           )}
         </button>
 
-        {/* Pyodide status */}
+        {/* Runtime status */}
         <span style={{
           fontSize: '0.6875rem',
-          color: pyReady ? '#2b8a55' : '#c07b22',
+          color: runtimeReady ? '#2b8a55' : '#c07b22',
         }}>
-          {pyReady ? '● Python' : '○ Загрузка...'}
+          {runtimeReady ? `? ${LANGUAGE_OPTIONS[language].statusName}` : '? ????????...'}
         </span>
       </div>
 
@@ -369,7 +460,7 @@ export default function CodeEditorPage() {
             background: bgToolbar, borderBottom: `1px solid ${border}`,
             fontSize: '0.6875rem', color: textMuted, fontFamily: 'monospace',
           }}>
-            main.py
+            {LANGUAGE_OPTIONS[language].fileName}
           </div>
           <div ref={editorRef} style={{ flex: 1, overflow: 'auto' }} />
         </div>
