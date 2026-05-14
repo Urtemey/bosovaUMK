@@ -7,10 +7,12 @@ interface CMModules {
   EditorView: typeof import('@codemirror/view').EditorView;
   basicSetup: typeof import('codemirror').basicSetup;
   python: typeof import('@codemirror/lang-python').python;
+  cpp: typeof import('@codemirror/lang-cpp').cpp;
   oneDark: typeof import('@codemirror/theme-one-dark').oneDark;
   EditorState: typeof import('@codemirror/state').EditorState;
   keymap: typeof import('@codemirror/view').keymap;
   indentWithTab: typeof import('@codemirror/commands').indentWithTab;
+  Compartment: typeof import('@codemirror/state').Compartment;
 }
 
 let cmModulesPromise: Promise<CMModules> | null = null;
@@ -18,9 +20,10 @@ let cmModulesPromise: Promise<CMModules> | null = null;
 function loadCMModules(): Promise<CMModules> {
   if (cmModulesPromise) return cmModulesPromise;
   cmModulesPromise = (async () => {
-    const [cm, langPy, theme, state, view, commands] = await Promise.all([
+    const [cm, langPy, langCpp, theme, state, view, commands] = await Promise.all([
       import('codemirror'),
       import('@codemirror/lang-python'),
+      import('@codemirror/lang-cpp'),
       import('@codemirror/theme-one-dark'),
       import('@codemirror/state'),
       import('@codemirror/view'),
@@ -30,13 +33,57 @@ function loadCMModules(): Promise<CMModules> {
       EditorView: view.EditorView,
       basicSetup: cm.basicSetup,
       python: langPy.python,
+      cpp: langCpp.cpp,
       oneDark: theme.oneDark,
       EditorState: state.EditorState,
       keymap: view.keymap,
       indentWithTab: commands.indentWithTab,
+      Compartment: state.Compartment,
     };
   })();
   return cmModulesPromise;
+}
+
+
+type PanelLanguage = 'python' | 'cpp' | 'c';
+
+const LANGUAGE_STORAGE_KEY = 'attempt-ide-language';
+const CODE_STORAGE_PREFIX = 'attempt-ide-code-v2';
+const LANGUAGE_OPTIONS: Record<PanelLanguage, { label: string; fileName: string; defaultCode: string }> = {
+  python: { label: 'Python', fileName: 'main.py', defaultCode: `# Python
+print("Hello")
+` },
+  cpp: { label: 'C++', fileName: 'main.cpp', defaultCode: `#include <iostream>
+using namespace std;
+
+int main() {
+    cout << "Hello" << endl;
+    return 0;
+}
+` },
+  c: { label: 'C', fileName: 'main.c', defaultCode: `#include <stdio.h>
+
+int main() {
+    printf("Hello\\n");
+    return 0;
+}
+` },
+};
+
+function isPanelLanguage(value: string | null): value is PanelLanguage {
+  return value === 'python' || value === 'cpp' || value === 'c';
+}
+
+function codeStorageKey(language: PanelLanguage) {
+  return `${CODE_STORAGE_PREFIX}-${language}`;
+}
+
+function getLanguageExtension(cm: CMModules, language: PanelLanguage) {
+  return language === 'python' ? cm.python() : cm.cpp();
+}
+
+function workerPath(language: PanelLanguage) {
+  return language === 'python' ? '/pyodide-worker.js' : '/cpp-worker-adapter.js';
 }
 
 interface Props {
@@ -48,9 +95,16 @@ export default function PythonPanel({ open, onClose }: Props) {
   const editorRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const viewRef = useRef<any>(null);
+  const languageCompRef = useRef<{ reconfigure: (ext: unknown) => unknown } | null>(null);
+  const [language, setLanguage] = useState<PanelLanguage>(() => {
+    if (typeof window === 'undefined') return 'python';
+    const savedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    return isPanelLanguage(savedLanguage) ? savedLanguage : 'python';
+  });
+  const languageRef = useRef<PanelLanguage>(language);
   const codeRef = useRef<string>(
     typeof window !== 'undefined'
-      ? localStorage.getItem('python-panel-code') || '# Python\nprint("Hello")\n'
+      ? localStorage.getItem(codeStorageKey(language)) || LANGUAGE_OPTIONS[language].defaultCode
       : ''
   );
   const workerRef = useRef<Worker | null>(null);
@@ -59,32 +113,36 @@ export default function PythonPanel({ open, onClose }: Props) {
   const [output, setOutput] = useState('');
   const [error, setError] = useState('');
   const [running, setRunning] = useState(false);
-  const [pyReady, setPyReady] = useState(false);
+  const [runtimeReady, setRuntimeReady] = useState(false);
   const [editorReady, setEditorReady] = useState(false);
   const [stdinInput, setStdinInput] = useState('');
+
+  useEffect(() => {
+    languageRef.current = language;
+  }, [language]);
 
   // Init Web Worker when panel opens
   useEffect(() => {
     if (!open) return;
     if (workerRef.current) return;
 
-    const worker = new Worker('/pyodide-worker.js');
+    const worker = new Worker(workerPath(language));
     workerRef.current = worker;
 
     worker.onmessage = (e) => {
       const { type, output: out, error: err } = e.data;
-      if (type === 'ready') setPyReady(true);
+      if (type === 'ready') setRuntimeReady(true);
       else if (type === 'result') { setOutput(out || ''); setRunning(false); }
       else if (type === 'error') { setError(err || 'Ошибка'); setRunning(false); }
     };
     worker.onerror = () => { setError('Worker ошибка'); setRunning(false); };
-    worker.postMessage({ type: 'init' });
+    worker.postMessage({ type: 'init', language });
 
     return () => {
       worker.terminate();
       workerRef.current = null;
     };
-  }, [open]);
+  }, [open, language]);
 
   // Init CodeMirror when panel opens
   useEffect(() => {
@@ -99,11 +157,14 @@ export default function PythonPanel({ open, onClose }: Props) {
       const cm = await loadCMModules();
       if (cancelled || !editorRef.current) return;
 
+      const languageComp = new cm.Compartment();
+      languageCompRef.current = languageComp as unknown as { reconfigure: (ext: unknown) => unknown };
+
       const updateListener = cm.EditorView.updateListener.of((update: { docChanged: boolean; state: { doc: { toString: () => string } } }) => {
         if (update.docChanged) {
           const code = update.state.doc.toString();
           codeRef.current = code;
-          localStorage.setItem('python-panel-code', code);
+          localStorage.setItem(codeStorageKey(languageRef.current), code);
         }
       });
 
@@ -111,7 +172,7 @@ export default function PythonPanel({ open, onClose }: Props) {
         doc: codeRef.current,
         extensions: [
           cm.basicSetup,
-          cm.python(),
+          languageComp.of(getLanguageExtension(cm, language)),
           cm.oneDark,
           cm.keymap.of([cm.indentWithTab]),
           updateListener,
@@ -139,7 +200,7 @@ export default function PythonPanel({ open, onClose }: Props) {
         mountedRef.current = false;
       }
     };
-  }, [open]);
+  }, [open, language]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -154,8 +215,8 @@ export default function PythonPanel({ open, onClose }: Props) {
     setRunning(true);
     setError('');
     setOutput('');
-    workerRef.current.postMessage({ type: 'run', code: codeRef.current, stdin: stdinInput, debug });
-  }, [running, stdinInput]);
+    workerRef.current.postMessage({ type: 'run', language, code: codeRef.current, stdin: stdinInput, debug });
+  }, [running, stdinInput, language]);
 
   const stopCode = useCallback(() => {
     if (!running || !workerRef.current) return;
@@ -163,19 +224,42 @@ export default function PythonPanel({ open, onClose }: Props) {
     workerRef.current = null;
     setRunning(false);
     setError('Выполнение прервано');
-    setPyReady(false);
+    setRuntimeReady(false);
 
-    const worker = new Worker('/pyodide-worker.js');
+    const worker = new Worker(workerPath(language));
     workerRef.current = worker;
     worker.onmessage = (e) => {
       const { type, output: out, error: err } = e.data;
-      if (type === 'ready') setPyReady(true);
+      if (type === 'ready') setRuntimeReady(true);
       else if (type === 'result') { setOutput(out || ''); setRunning(false); }
       else if (type === 'error') { setError(err || 'Ошибка'); setRunning(false); }
     };
     worker.onerror = () => { setError('Worker ошибка'); setRunning(false); };
-    worker.postMessage({ type: 'init' });
-  }, [running]);
+    worker.postMessage({ type: 'init', language });
+  }, [running, language]);
+
+
+  const changeLanguage = useCallback(async (nextLanguage: PanelLanguage) => {
+    if (nextLanguage === language) return;
+    const currentCode = viewRef.current?.state?.doc?.toString?.() || codeRef.current;
+    localStorage.setItem(codeStorageKey(language), currentCode);
+
+    const nextCode = localStorage.getItem(codeStorageKey(nextLanguage)) || LANGUAGE_OPTIONS[nextLanguage].defaultCode;
+    codeRef.current = nextCode;
+    setLanguage(nextLanguage);
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, nextLanguage);
+    setOutput('');
+    setError('');
+    setRuntimeReady(false);
+
+    if (viewRef.current && languageCompRef.current) {
+      const cm = await loadCMModules();
+      viewRef.current.dispatch({
+        changes: { from: 0, to: viewRef.current.state.doc.length, insert: nextCode },
+        effects: languageCompRef.current.reconfigure(getLanguageExtension(cm, nextLanguage)),
+      });
+    }
+  }, [language]);
 
   if (!open) return null;
 
@@ -202,9 +286,23 @@ export default function PythonPanel({ open, onClose }: Props) {
           padding: '0.5rem 0.75rem',
           background: '#181825', borderBottom: '1px solid #313244', flexShrink: 0,
         }}>
-          <span style={{ fontWeight: 800, fontSize: '0.8125rem', color: '#cdd6f4', marginRight: 'auto' }}>
-            Python
+          <span style={{ fontWeight: 800, fontSize: '0.8125rem', color: '#cdd6f4' }}>
+            IDE
           </span>
+          <select
+            value={language}
+            onChange={(e) => changeLanguage(e.target.value as PanelLanguage)}
+            disabled={running}
+            style={{
+              marginRight: 'auto', padding: '0.25rem 0.5rem', borderRadius: 6,
+              border: '1px solid #313244', background: '#1e1e2e', color: '#cdd6f4',
+              fontSize: '0.75rem', fontWeight: 700, cursor: running ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {(Object.keys(LANGUAGE_OPTIONS) as PanelLanguage[]).map((key) => (
+              <option key={key} value={key}>{LANGUAGE_OPTIONS[key].label}</option>
+            ))}
+          </select>
 
           {/* Run */}
           <button type="button" onClick={() => runCode(false)} disabled={running || !editorReady}
@@ -260,12 +358,15 @@ export default function PythonPanel({ open, onClose }: Props) {
           </button>
         </div>
 
-        {/* Pyodide status */}
-        {!pyReady && (
+        {/* Runtime status */}
+        {!runtimeReady && (
           <div style={{ padding: '0.25rem 0.75rem', background: '#181825', borderBottom: '1px solid #313244', fontSize: '0.6875rem', color: '#c07b22' }}>
-            Загрузка Pyodide...
+            loading runtime...
           </div>
         )}
+        <div style={{ padding: '0.25rem 0.75rem', background: '#181825', borderBottom: '1px solid #313244', fontSize: '0.6875rem', color: '#a6adc8', fontFamily: 'monospace' }}>
+          {LANGUAGE_OPTIONS[language].fileName}
+        </div>
 
         {/* Editor */}
         <div ref={editorRef} style={{ flex: '1 1 50%', overflow: 'auto', minHeight: 150 }} />

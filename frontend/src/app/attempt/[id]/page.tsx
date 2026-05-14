@@ -500,7 +500,7 @@ export default function AttemptPage() {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
           </svg>
-          PY
+          IDE
         </button>
       )}
 
@@ -553,12 +553,12 @@ export default function AttemptPage() {
             onClick={() => setShowPython(true)}
             className="btn btn-ghost btn-sm"
             style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', gap: '0.25rem' }}
-            title="Python IDE"
+            title="IDE"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
             </svg>
-            <span className="hidden sm:inline">Python</span>
+            <span className="hidden sm:inline">IDE</span>
           </button>
 
           {/* Map toggle button */}
