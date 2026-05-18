@@ -60,8 +60,8 @@ export const classroomsApi = {
 export const testsApi = {
   list: (grade?: number) =>
     apiFetch(`/tests${grade ? `?grade=${grade}` : ''}`),
-  get: (id: number) =>
-    apiFetch(`/tests/${id}`),
+  get: (id: number, token?: string | null) =>
+    apiFetch(`/tests/${id}`, { token: token || undefined }),
   my: (token: string) =>
     apiFetch('/tests/my', { token }),
   create: (token: string, data: Record<string, unknown>) =>

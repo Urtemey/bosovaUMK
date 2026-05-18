@@ -75,6 +75,12 @@ def student(db, classroom):
 
 
 @pytest.fixture
+def student_token(client, student):
+    resp = client.post("/api/auth/student-login", json={"login": student.login, "code": student.code})
+    return resp.get_json()["access_token"]
+
+
+@pytest.fixture
 def published_test(db, teacher):
     t = Test(
         title="Тест по информатике",
@@ -87,3 +93,18 @@ def published_test(db, teacher):
     db.session.add(t)
     db.session.commit()
     return t
+
+
+@pytest.fixture
+def question(db, published_test):
+    q = Question(
+        test_id=published_test.id,
+        order=1,
+        question_type=QuestionType.SINGLE_CHOICE,
+        content={"text": "Что такое алгоритм?", "options": ["Программа", "Последовательность шагов", "Компьютер", "Файл"]},
+        correct_answer=1,
+        points=1,
+    )
+    db.session.add(q)
+    db.session.commit()
+    return q

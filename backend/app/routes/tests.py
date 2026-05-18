@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt, verify_jwt_in_request
 from app import db
 from app.models.test import Test
 from app.models.question import Question, QuestionType
@@ -35,7 +35,17 @@ def list_my_tests():
 @tests_bp.route('/<int:test_id>', methods=['GET'])
 def get_test(test_id):
     test = Test.query.get_or_404(test_id)
-    return jsonify(test.to_dict(include_questions=True))
+    include_correct = False
+    try:
+        verify_jwt_in_request(optional=True)
+        identity = get_jwt_identity()
+        if identity:
+            claims = get_jwt()
+            if claims.get('role') == 'admin' and test.created_by == int(identity):
+                include_correct = True
+    except Exception:
+        pass
+    return jsonify(test.to_dict(include_questions=True, include_correct=include_correct))
 
 
 @tests_bp.route('', methods=['POST'])

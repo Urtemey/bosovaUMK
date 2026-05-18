@@ -63,7 +63,7 @@ def submit_answer(attempt_id):
     question_id = data.get('question_id')
     student_answer = data.get('answer')
 
-    question = Question.query.get_or_404(question_id)
+    question = Question.query.filter_by(id=question_id, test_id=attempt.test_id).first_or_404()
 
     existing = Answer.query.filter_by(attempt_id=attempt.id, question_id=question_id).first()
     if existing:

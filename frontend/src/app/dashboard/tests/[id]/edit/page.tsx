@@ -980,7 +980,7 @@ export default function EditTestPage() {
 
   const loadTest = useCallback(async () => {
     try {
-      const data = await testsApi.get(testId) as Test;
+      const data = await testsApi.get(testId, token) as Test;
       setTest(data);
       setInfoTitle(data.title);
       setInfoGrade(data.grade);
@@ -993,7 +993,7 @@ export default function EditTestPage() {
     } finally {
       setLoading(false);
     }
-  }, [testId]);
+  }, [testId, token]);
 
   useEffect(() => {
     if (authLoading) return;

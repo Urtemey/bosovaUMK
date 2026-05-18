@@ -38,7 +38,7 @@ class Test(db.Model):
             merged.update(self.settings)
         return merged
 
-    def to_dict(self, include_questions=False):
+    def to_dict(self, include_questions=False, include_correct=False):
         data = {
             'id': self.id,
             'title': self.title,
@@ -52,5 +52,5 @@ class Test(db.Model):
             'updated_at': self.updated_at.isoformat(),
         }
         if include_questions:
-            data['questions'] = [q.to_dict() for q in self.questions]
+            data['questions'] = [q.to_dict(include_correct=include_correct) for q in self.questions]
         return data
