@@ -22,10 +22,16 @@ interface Question {
   points: number;
 }
 
+interface SavedAnswer {
+  question_id: number;
+  student_answer: unknown;
+}
+
 interface Attempt {
   id: number;
   test_id: number;
   started_at: string;
+  answers?: SavedAnswer[];
 }
 
 function formatTime(seconds: number) {
@@ -323,6 +329,19 @@ export default function AttemptPage() {
 
         setAttempt(attemptData);
 
+        // Восстанавливаем уже сохранённые ответы при возврате к попытке
+        const saved = attemptData.answers || [];
+        if (saved.length > 0) {
+          const restored: Record<number, unknown> = {};
+          const savedIds = new Set<number>();
+          for (const a of saved) {
+            restored[a.question_id] = a.student_answer;
+            savedIds.add(a.question_id);
+          }
+          setAnswers(restored);
+          setSavedQuestions(savedIds);
+        }
+
         const { testsApi } = await import('@/lib/api');
         const test = await testsApi.get(attemptData.test_id) as { questions: Question[] };
         setQuestions(test.questions || []);
@@ -455,7 +474,6 @@ export default function AttemptPage() {
   const progressPct = totalCount > 0 ? (savedCount / totalCount) * 100 : 0;
   const currentHasAnswer = currentQuestion && answers[currentQuestion.id] !== undefined;
   const currentIsSaved = currentQuestion && savedQuestions.has(currentQuestion.id);
-  const allSaved = savedCount === totalCount && totalCount > 0;
 
   return (
     <div

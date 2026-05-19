@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { testsApi, attemptsApi, assignmentsApi, classroomsApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -63,10 +63,12 @@ function AssignModal({
   testId,
   token,
   onClose,
+  initialClassroomId,
 }: {
   testId: number;
   token: string;
   onClose: () => void;
+  initialClassroomId?: number | null;
 }) {
   const [classrooms, setClassrooms] = useState<ClassroomOption[]>([]);
   const [loadingCls, setLoadingCls] = useState(true);
@@ -87,6 +89,9 @@ function AssignModal({
       try {
         const data = await classroomsApi.list(token) as ClassroomOption[];
         setClassrooms(data);
+        if (initialClassroomId && data.some(c => c.id === initialClassroomId)) {
+          setSelectedClassroom(initialClassroomId);
+        }
       } catch (e) {
         console.error(e);
       } finally {
@@ -94,7 +99,7 @@ function AssignModal({
       }
     }
     load();
-  }, [token]);
+  }, [token, initialClassroomId]);
 
   const currentClassroom = classrooms.find(c => c.id === selectedClassroom);
 
@@ -371,9 +376,23 @@ export default function TestViewPage() {
   const [starting, setStarting] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
+  const [assignClassroomId, setAssignClassroomId] = useState<number | null>(null);
+  const autoOpenedRef = useRef(false);
   const { token, role } = useAuth();
   const router = useRouter();
   const { showToast } = useToast();
+
+  useEffect(() => {
+    if (autoOpenedRef.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const cid = Number(params.get('assign_classroom'));
+    if (cid > 0 && token && (role === 'teacher' || role === 'admin')) {
+      autoOpenedRef.current = true;
+      setAssignClassroomId(cid);
+      setShowAssignModal(true);
+      router.replace(`/test/${id}`);
+    }
+  }, [id, token, role, router]);
 
   useEffect(() => {
     async function load() {
@@ -537,7 +556,8 @@ export default function TestViewPage() {
         <AssignModal
           testId={test.id}
           token={token}
-          onClose={() => setShowAssignModal(false)}
+          onClose={() => { setShowAssignModal(false); setAssignClassroomId(null); }}
+          initialClassroomId={assignClassroomId}
         />
       )}
 

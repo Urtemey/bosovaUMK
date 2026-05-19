@@ -36,8 +36,16 @@ function runJSCPP(code, stdin) {
   return output.trim() || '(no output)';
 }
 
+function numberedListing(code) {
+  const lines = String(code || '').split('\n');
+  const width = String(lines.length).length;
+  return lines
+    .map((line, i) => String(i + 1).padStart(width, ' ') + ' | ' + line)
+    .join('\n');
+}
+
 self.onmessage = function (e) {
-  const { type, code, stdin } = e.data || {};
+  const { type, code, stdin, debug } = e.data || {};
   if (type === 'init') {
     self.postMessage({ type: 'ready' });
     return;
@@ -45,8 +53,26 @@ self.onmessage = function (e) {
   if (type !== 'run') return;
 
   try {
-    self.postMessage({ type: 'result', output: runJSCPP(code || '', stdin || '') });
+    const out = runJSCPP(code || '', stdin || '');
+    if (debug) {
+      self.postMessage({
+        type: 'result',
+        output:
+          '=== Листинг ===\n' + numberedListing(code) +
+          '\n\n=== Вывод ===\n' + out,
+      });
+    } else {
+      self.postMessage({ type: 'result', output: out });
+    }
   } catch (err) {
-    self.postMessage({ type: 'error', error: String(err) });
+    // JSCPP-сообщение нередко уже содержит позицию (line N) — показываем как есть,
+    // ничего не выдумывая. В debug добавляем нумерованный листинг для поиска строки.
+    const msg = err && err.message ? String(err.message) : String(err);
+    self.postMessage({
+      type: 'error',
+      error: debug
+        ? '=== Листинг ===\n' + numberedListing(code) + '\n\n=== Ошибка ===\n' + msg
+        : msg,
+    });
   }
 };

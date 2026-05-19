@@ -46,13 +46,16 @@ function pluralQ(n: number) {
   return `${n} вопросов`;
 }
 
-function TestCard({ test, index }: { test: Test; index: number }) {
+function TestCard({ test, index, assignClassroom }: { test: Test; index: number; assignClassroom: number | null }) {
   const bg = GRADE_BG[test.grade] ?? '#f0fdfa';
   const color = GRADE_COLOR[test.grade] ?? '#2b4c7e';
+  const href = assignClassroom
+    ? `/test/${test.id}?assign_classroom=${assignClassroom}`
+    : `/test/${test.id}`;
 
   return (
     <Link
-      href={`/test/${test.id}`}
+      href={href}
       className="test-card animate-fade-up"
       style={{ animationDelay: `${0.05 * Math.min(index, 8)}s` }}
     >
@@ -129,8 +132,17 @@ function SkeletonCard() {
 export default function HomePage() {
   const [testsByGrade, setTestsByGrade] = useState<Record<number, Test[]>>({});
   const [selectedGrade, setSelectedGrade] = useState<number>(5);
+  const [assignClassroom, setAssignClassroom] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const { user, role } = useAuth();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const g = Number(params.get('grade'));
+    if (GRADES.includes(g)) setSelectedGrade(g);
+    const a = Number(params.get('assign'));
+    if (a > 0) setAssignClassroom(a);
+  }, []);
 
   useEffect(() => {
     async function load() {
@@ -244,6 +256,24 @@ export default function HomePage() {
             Выберите класс и пройдите тематический тест
           </p>
 
+          {assignClassroom && (
+            <div
+              className="animate-fade-up"
+              style={{
+                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                padding: '0.75rem 1rem', marginBottom: '1.5rem',
+                background: 'var(--color-accent-light)',
+                border: '1px solid var(--color-accent)',
+                borderRadius: 8, fontSize: '0.875rem', color: 'var(--color-accent)',
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" />
+              </svg>
+              Выберите тест — откроется окно выдачи с уже выбранным классом
+            </div>
+          )}
+
           {/* Grade filter pills */}
           <div
             className="animate-fade-up stagger-2"
@@ -298,7 +328,7 @@ export default function HomePage() {
                 </p>
               </div>
             ) : (
-              tests.map((test, idx) => <TestCard key={test.id} test={test} index={idx} />)
+              tests.map((test, idx) => <TestCard key={test.id} test={test} index={idx} assignClassroom={assignClassroom} />)
             )}
           </div>
         </div>

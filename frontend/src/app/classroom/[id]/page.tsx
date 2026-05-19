@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth';
 import { classroomsApi, attemptsApi, assignmentsApi } from '@/lib/api';
 import Link from 'next/link';
 import { useToast } from '@/components/ui/Toast';
+import JournalView from '@/components/classroom/JournalView';
 
 interface Student {
   id: number;
@@ -47,13 +48,6 @@ function pluralStudents(n: number) {
   if (n === 1) return '1 ученик';
   if (n >= 2 && n <= 4) return `${n} ученика`;
   return `${n} учеников`;
-}
-
-function ScoreBadge({ score }: { score: number }) {
-  let cls = 'score-badge score-low';
-  if (score >= 70) cls = 'score-badge score-high';
-  else if (score >= 40) cls = 'score-badge score-med';
-  return <span className={cls}>{Math.round(score)}%</span>;
 }
 
 export default function ClassroomPage() {
@@ -433,6 +427,15 @@ export default function ClassroomPage() {
       {/* ── Assignments tab ─────────────────────────────────── */}
       {tab === 'assignments' && (
         <div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={() => router.push(`/?grade=${classroom.grade}&assign=${classroom.id}`)}
+            >
+              + Выдать тест классу
+            </button>
+          </div>
           {assignmentsLoading ? (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4rem 0' }}>
               <div style={{ textAlign: 'center' }}>
@@ -455,9 +458,13 @@ export default function ClassroomPage() {
               <p className="t-caption" style={{ marginBottom: '1rem' }}>
                 Тесты для этого класса ещё не выданы
               </p>
-              <Link href="/dashboard" className="btn btn-primary btn-sm" style={{ textDecoration: 'none' }}>
-                Выдать тест
-              </Link>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={() => router.push(`/?grade=${classroom.grade}&assign=${classroom.id}`)}
+              >
+                Выбрать тест из каталога
+              </button>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -564,145 +571,7 @@ export default function ClassroomPage() {
               </p>
             </div>
           ) : (
-            <div className="card-lg" style={{ overflow: 'hidden' }}>
-              <div style={{ overflowX: 'auto' }}>
-                <table className="journal-table" style={{ minWidth: '36rem' }}>
-                  <thead>
-                    <tr>
-                      {/* Sticky student name column */}
-                      <th
-                        style={{
-                          textAlign: 'left',
-                          minWidth: '12rem',
-                          position: 'sticky',
-                          left: 0,
-                          background: 'var(--color-surface-2)',
-                          zIndex: 2,
-                        }}
-                      >
-                        Ученик
-                      </th>
-                      {journalData.tests.map(test => (
-                        <th
-                          key={test.id}
-                          title={test.title}
-                          style={{
-                            textAlign: 'center',
-                            minWidth: '6rem',
-                            maxWidth: '8rem',
-                          }}
-                        >
-                          <div
-                            style={{
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                              maxWidth: '7rem',
-                              textAlign: 'center',
-                            }}
-                          >
-                            {/* Strip "Тест N." prefix if present */}
-                            {test.title.replace(/^Тест\s+\d+\.\s*/i, '')}
-                          </div>
-                        </th>
-                      ))}
-                      <th
-                        style={{
-                          textAlign: 'center',
-                          minWidth: '5rem',
-                          fontWeight: 700,
-                          color: 'var(--color-text-secondary)',
-                        }}
-                      >
-                        Средняя
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {journalData.journal.map((row, i) => (
-                      <tr key={row.student.id}>
-                        {/* Sticky name */}
-                        <td
-                          style={{
-                            position: 'sticky',
-                            left: 0,
-                            background: i % 2 === 0 ? 'var(--color-surface)' : 'var(--color-surface-2)',
-                            zIndex: 1,
-                          }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', minWidth: '1.25rem', textAlign: 'right' }}>
-                              {i + 1}
-                            </span>
-                            <span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>
-                              {row.student.display_name}
-                            </span>
-                          </div>
-                        </td>
-
-                        {/* Test results */}
-                        {journalData.tests.map(test => {
-                          const result = row.results[test.id];
-                          return (
-                            <td key={test.id} style={{ textAlign: 'center' }}>
-                              {result ? (
-                                <Link href={`/classroom/${id}/stats/${test.id}`} style={{ textDecoration: 'none' }}>
-                                  <ScoreBadge score={result.score_percent} />
-                                </Link>
-                              ) : (
-                                <span style={{ color: 'var(--color-border-strong)', fontSize: '0.875rem' }}>—</span>
-                              )}
-                            </td>
-                          );
-                        })}
-
-                        {/* Average */}
-                        <td style={{ textAlign: 'center' }}>
-                          {row.average !== null ? (
-                            <span
-                              style={{
-                                fontSize: '0.9375rem',
-                                fontWeight: 700,
-                                color: row.average >= 70
-                                  ? 'var(--color-ok)'
-                                  : row.average >= 40
-                                  ? 'var(--color-warn)'
-                                  : 'var(--color-danger)',
-                              }}
-                            >
-                              {Math.round(row.average)}%
-                            </span>
-                          ) : (
-                            <span style={{ color: 'var(--color-border-strong)', fontSize: '0.875rem' }}>—</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Legend */}
-              <div
-                style={{
-                  display: 'flex',
-                  gap: '1rem',
-                  padding: '0.75rem 1.125rem',
-                  borderTop: '1px solid var(--color-border)',
-                  flexWrap: 'wrap',
-                }}
-              >
-                {[
-                  { cls: 'score-badge score-high', label: '≥ 70%' },
-                  { cls: 'score-badge score-med', label: '40–70%' },
-                  { cls: 'score-badge score-low', label: '< 40%' },
-                ].map(({ cls, label }) => (
-                  <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                    <span className={cls}>{label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <JournalView data={journalData} classroomId={Number(id)} />
           )}
         </div>
       )}
