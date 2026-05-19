@@ -101,8 +101,12 @@ function runJSCPPDebug(code, stdin) {
       const changed = [];
       const snapshot = Object.create(null);
       for (const v of vars) {
+        // JSCPP в scope держит и функции stdlib (printf/scanf/main…),
+        // у них value === undefined — это шум, не переменные.
+        if (v.value === undefined || v.value === null) continue;
         let val;
         try { val = String(v.value); } catch (_) { val = '<?>'; }
+        if (val === 'undefined' || val === '') continue;
         snapshot[v.name] = val;
         if (prevVars[v.name] !== val) changed.push(v.name + '=' + val);
       }
