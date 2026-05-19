@@ -10,8 +10,9 @@ import TableHeader from '@tiptap/extension-table-header';
 import Image from '@tiptap/extension-image';
 import Placeholder from '@tiptap/extension-placeholder';
 import { Node, mergeAttributes } from '@tiptap/core';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import katex from 'katex';
+import { uploadsApi } from '@/lib/api';
 
 /* ─── KaTeX inline node ─────────────────────────────────────── */
 const KatexInline = Node.create({
@@ -85,9 +86,10 @@ function TBtn({ active, onClick, title, children, disabled }: {
 }
 
 /* ─── Toolbar ────────────────────────────────────────────────── */
-function Toolbar({ editor }: { editor: Editor }) {
+function Toolbar({ editor, uploadImage }: { editor: Editor; uploadImage?: (file: File) => Promise<void> }) {
   const [showFormula, setShowFormula] = useState(false);
   const [formula, setFormula] = useState('');
+  const imgInputRef = useRef<HTMLInputElement>(null);
 
   const insertFormula = () => {
     if (!formula.trim()) return;
@@ -100,6 +102,10 @@ function Toolbar({ editor }: { editor: Editor }) {
   };
 
   const insertImage = () => {
+    if (uploadImage) {
+      imgInputRef.current?.click();
+      return;
+    }
     const url = prompt('URL изображения:');
     if (url) editor.chain().focus().setImage({ src: url }).run();
   };
@@ -164,6 +170,19 @@ function Toolbar({ editor }: { editor: Editor }) {
       <TBtn onClick={insertImage} title="Изображение">
         {i('M21 15V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10m18 0l-4.5-4.5L14 13l-3-3-5.5 5.5M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4')}
       </TBtn>
+      {uploadImage && (
+        <input
+          ref={imgInputRef}
+          type="file"
+          accept="image/*"
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) uploadImage(file);
+            e.target.value = '';
+          }}
+        />
+      )}
 
       <TBtn active={showFormula} onClick={() => setShowFormula(!showFormula)} title="Формула (LaTeX)">
         <span style={{ fontWeight: 700, fontSize: 13, fontFamily: 'serif' }}>∑</span>
@@ -206,12 +225,38 @@ interface Props {
   value: string;
   onChange: (html: string) => void;
   placeholder?: string;
+  token?: string;
 }
 
-export default function RichTextEditor({ value, onChange, placeholder }: Props) {
+export default function RichTextEditor({ value, onChange, placeholder, token }: Props) {
   const handleUpdate = useCallback(({ editor }: { editor: Editor }) => {
     onChange(editor.getHTML());
   }, [onChange]);
+
+  const tokenRef = useRef(token);
+  tokenRef.current = token;
+  const editorRef = useRef<Editor | null>(null);
+
+  const uploadImage = useCallback(async (file: File) => {
+    const t = tokenRef.current;
+    if (!t) return;
+    try {
+      const { url } = await uploadsApi.image(t, file);
+      editorRef.current?.chain().focus().setImage({ src: url }).run();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Не удалось загрузить изображение');
+    }
+  }, []);
+
+  const handleImageEvent = useCallback((files: FileList | null | undefined, event: Event) => {
+    const file = files?.[0];
+    if (file && file.type.startsWith('image/') && tokenRef.current) {
+      event.preventDefault();
+      uploadImage(file);
+      return true;
+    }
+    return false;
+  }, [uploadImage]);
 
   const editor = useEditor({
     extensions: [
@@ -232,8 +277,14 @@ export default function RichTextEditor({ value, onChange, placeholder }: Props) 
       attributes: {
         style: 'min-height:120px;padding:0.875rem 1rem;outline:none;font-size:0.9375rem;line-height:1.6;color:var(--color-text-primary);',
       },
+      handlePaste: (_view, event) =>
+        handleImageEvent((event as ClipboardEvent).clipboardData?.files, event),
+      handleDrop: (_view, event) =>
+        handleImageEvent((event as DragEvent).dataTransfer?.files, event),
     },
   });
+
+  editorRef.current = editor;
 
   // Sync external value changes (only if editor content differs)
   useEffect(() => {
@@ -250,7 +301,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: Props) 
       border: '1px solid var(--color-border-strong)', borderRadius: 8,
       background: 'var(--color-surface)', overflow: 'hidden',
     }}>
-      <Toolbar editor={editor} />
+      <Toolbar editor={editor} uploadImage={token ? uploadImage : undefined} />
       <EditorContent editor={editor} />
       <style>{`
         .tiptap p { margin: 0.25em 0; }

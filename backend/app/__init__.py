@@ -35,6 +35,7 @@ def create_app(config_class=Config):
     from app.routes.assignments import assignments_bp
     from app.routes.attempts import attempts_bp
     from app.routes.questions import questions_bp
+    from app.routes.uploads import uploads_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(classrooms_bp, url_prefix='/api/classrooms')
@@ -42,6 +43,15 @@ def create_app(config_class=Config):
     app.register_blueprint(assignments_bp, url_prefix='/api/assignments')
     app.register_blueprint(attempts_bp, url_prefix='/api/attempts')
     app.register_blueprint(questions_bp, url_prefix='/api/questions')
+    app.register_blueprint(uploads_bp, url_prefix='/api/uploads')
+
+    from werkzeug.exceptions import RequestEntityTooLarge
+
+    @app.errorhandler(RequestEntityTooLarge)
+    def _too_large(_e):
+        from flask import jsonify
+        limit_mb = app.config['MAX_CONTENT_LENGTH'] // (1024 * 1024)
+        return jsonify({'error': f'Файл слишком большой (макс. {limit_mb} МБ)'}), 413
 
     # Раздача изображений только для локальной разработки.
     # В продакшене S3_IMAGES_BASE_URL задан — ссылки ведут на S3 напрямую.

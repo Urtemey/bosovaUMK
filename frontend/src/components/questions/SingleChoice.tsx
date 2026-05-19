@@ -3,7 +3,7 @@
 import HtmlContent from '@/components/ui/HtmlContent';
 
 interface Props {
-  content: { text: string; options: string[]; image?: string };
+  content: { text: string; options: string[]; image?: string; option_images?: string[] };
   value: unknown;
   onChange: (value: unknown) => void;
   disabled?: boolean;
@@ -68,6 +68,9 @@ export default function SingleChoice({ content, value, onChange, disabled }: Pro
               </div>
               <span style={{ fontSize: '0.875rem', color: isSelected ? 'var(--color-text-primary)' : 'var(--color-text-secondary)', flex: 1, overflow: 'hidden' }}>
                 <HtmlContent html={option} style={{ display: 'inline' }} />
+                {content.option_images?.[i] && (
+                  <img src={content.option_images[i]} alt="" style={{ display: 'block', maxWidth: '100%', maxHeight: 160, marginTop: option ? '0.5rem' : 0, borderRadius: '0.5rem', border: '1px solid var(--color-border)' }} />
+                )}
               </span>
               <style>{`label img { max-width: 100%; height: auto; border-radius: 0.5rem; vertical-align: middle; }`}</style>
             </label>

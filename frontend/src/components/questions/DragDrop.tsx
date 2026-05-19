@@ -7,6 +7,7 @@ interface Props {
     text: string;
     items: string[];
     slots: string[];
+    image?: string;
   };
   value: unknown;
   onChange: (value: unknown) => void;
@@ -36,6 +37,9 @@ export default function DragDrop({ content, value, onChange, disabled }: Props) 
   return (
     <div>
       <div className="text-gray-900 font-medium mb-4 leading-relaxed"><HtmlContent html={content.text} /></div>
+      {content.image && (
+        <img src={content.image} alt="" style={{ marginBottom: '1rem', maxWidth: '100%', borderRadius: '0.75rem', border: '1px solid var(--color-border)' }} />
+      )}
       <div className="space-y-3">
         {content.slots.map((slot, si) => {
           const slotIdx = String(si);

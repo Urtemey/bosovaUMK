@@ -4,7 +4,7 @@ import { useState } from 'react';
 import HtmlContent from '@/components/ui/HtmlContent';
 
 interface Props {
-  content: { text: string; items: string[] };
+  content: { text: string; items: string[]; image?: string };
   value: unknown;
   onChange: (value: unknown) => void;
   disabled?: boolean;
@@ -62,6 +62,9 @@ export default function Ordering({ content, value, onChange, disabled }: Props) 
       <div className="text-gray-900 font-medium mb-4 leading-relaxed">
         <HtmlContent html={content.text} />
       </div>
+      {content.image && (
+        <img src={content.image} alt="" style={{ marginBottom: '1rem', maxWidth: '100%', borderRadius: '0.75rem', border: '1px solid var(--color-border)' }} />
+      )}
       <p className="text-xs text-gray-400 mb-3">Перетащите элементы или используйте стрелки для упорядочивания</p>
       <div className="space-y-2">
         {order.map((itemIdx, pos) => (

@@ -115,6 +115,24 @@ export const questionsApi = {
     apiFetch(`/questions/${id}`, { method: 'PUT', body: JSON.stringify(data), token }),
 };
 
+// Uploads
+export const uploadsApi = {
+  image: async (token: string, file: File): Promise<{ url: string }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${API_BASE}/uploads/image`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ error: 'Ошибка сервера' }));
+      throw new Error(error.error || `HTTP ${res.status}`);
+    }
+    return res.json();
+  },
+};
+
 // Assignments
 export const assignmentsApi = {
   create: (token: string, data: Record<string, unknown>) =>

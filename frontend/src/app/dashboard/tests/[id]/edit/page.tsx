@@ -14,6 +14,7 @@ import DragDrop from '@/components/questions/DragDrop';
 import SelectFromList from '@/components/questions/SelectFromList';
 import Ordering from '@/components/questions/Ordering';
 import CodeEditor from '@/components/questions/CodeEditor';
+import ImageUpload from '@/components/ui/ImageUpload';
 
 const RichTextEditor = dynamic(() => import('@/components/editor/RichTextEditor'), { ssr: false });
 
@@ -61,8 +62,11 @@ interface QuestionFormData {
   question_type: QuestionType;
   text: string;
   points: number;
+  // изображение к условию (любой тип)
+  image: string;
   // single_choice / multiple_choice
   options: string[];
+  optionImages: string[];
   correctSingle: number;
   correctMultiple: boolean[];
   // text_input
@@ -91,7 +95,9 @@ function emptyFormData(type: QuestionType): QuestionFormData {
     question_type: type,
     text: '',
     points: 1,
+    image: '',
     options: ['', ''],
+    optionImages: ['', ''],
     correctSingle: 0,
     correctMultiple: [false, false],
     acceptedAnswers: [''],
@@ -114,12 +120,14 @@ function formDataFromQuestion(q: Question): QuestionFormData {
   const content = q.content;
   const fd = emptyFormData(q.question_type as QuestionType);
   fd.text = (content.text as string) || '';
+  fd.image = (content.image as string) || '';
   fd.points = q.points;
 
   switch (q.question_type) {
     case 'single_choice': {
       const opts = (content.options as string[]) || ['', ''];
       fd.options = opts;
+      fd.optionImages = opts.map((_, i) => (content.option_images as string[])?.[i] || '');
       fd.correctSingle = typeof q.correct_answer === 'number' ? q.correct_answer : 0;
       fd.correctMultiple = opts.map(() => false);
       break;
@@ -127,6 +135,7 @@ function formDataFromQuestion(q: Question): QuestionFormData {
     case 'multiple_choice': {
       const opts = (content.options as string[]) || ['', ''];
       fd.options = opts;
+      fd.optionImages = opts.map((_, i) => (content.option_images as string[])?.[i] || '');
       fd.correctMultiple = opts.map((_, i) =>
         Array.isArray(q.correct_answer) ? (q.correct_answer as number[]).includes(i) : false
       );
@@ -173,18 +182,19 @@ function formDataFromQuestion(q: Question): QuestionFormData {
 
 function buildPayload(fd: QuestionFormData): { question_type: string; content: Record<string, unknown>; correct_answer: unknown; points: number } {
   const base = { question_type: fd.question_type, points: fd.points };
+  const img = fd.image ? { image: fd.image } : {};
 
   switch (fd.question_type) {
     case 'single_choice':
       return {
         ...base,
-        content: { text: fd.text, options: fd.options },
+        content: { text: fd.text, options: fd.options, option_images: fd.optionImages, ...img },
         correct_answer: fd.correctSingle,
       };
     case 'multiple_choice':
       return {
         ...base,
-        content: { text: fd.text, options: fd.options },
+        content: { text: fd.text, options: fd.options, option_images: fd.optionImages, ...img },
         correct_answer: fd.correctMultiple.reduce<number[]>((acc, checked, i) => {
           if (checked) acc.push(i);
           return acc;
@@ -193,7 +203,7 @@ function buildPayload(fd: QuestionFormData): { question_type: string; content: R
     case 'text_input':
       return {
         ...base,
-        content: { text: fd.text, placeholder: 'Введите ответ' },
+        content: { text: fd.text, placeholder: 'Введите ответ', ...img },
         correct_answer: fd.acceptedAnswers.filter(a => a.trim()),
       };
     case 'matching': {
@@ -201,26 +211,26 @@ function buildPayload(fd: QuestionFormData): { question_type: string; content: R
       fd.leftItems.forEach((_, i) => { correct[String(i)] = String(i); });
       return {
         ...base,
-        content: { text: fd.text, left: fd.leftItems, right: fd.rightItems },
+        content: { text: fd.text, left: fd.leftItems, right: fd.rightItems, ...img },
         correct_answer: correct,
       };
     }
     case 'drag_drop':
       return {
         ...base,
-        content: { text: fd.text, items: fd.dragItems, slots: fd.dragSlots },
+        content: { text: fd.text, items: fd.dragItems, slots: fd.dragSlots, ...img },
         correct_answer: fd.dragCorrect,
       };
     case 'select_list':
       return {
         ...base,
-        content: { text: fd.text, rows: fd.selectRows, columns: [], options: fd.selectOptions },
+        content: { text: fd.text, rows: fd.selectRows, columns: [], options: fd.selectOptions, ...img },
         correct_answer: fd.selectCorrect,
       };
     case 'ordering':
       return {
         ...base,
-        content: { text: fd.text, items: fd.orderItems },
+        content: { text: fd.text, items: fd.orderItems, ...img },
         correct_answer: fd.orderItems.map((_, i) => i),
       };
     case 'code':
@@ -231,6 +241,7 @@ function buildPayload(fd: QuestionFormData): { question_type: string; content: R
           language: fd.codeLanguage,
           starter_code: fd.codeStarterCode,
           test_cases: fd.codeTestCases,
+          ...img,
         },
         correct_answer: { test_cases: fd.codeTestCases },
       };
@@ -264,11 +275,13 @@ function QuestionConstructor({
   onSave,
   onCancel,
   saving,
+  token,
 }: {
   initial: QuestionFormData;
   onSave: (data: QuestionFormData) => void;
   onCancel: () => void;
   saving: boolean;
+  token: string;
 }) {
   const [fd, setFd] = useState<QuestionFormData>(initial);
   const [showPreview, setShowPreview] = useState(false);
@@ -282,6 +295,7 @@ function QuestionConstructor({
       ...emptyFormData(type),
       text: prev.text,
       points: prev.points,
+      image: prev.image,
     }));
   }
 
@@ -289,19 +303,25 @@ function QuestionConstructor({
 
   function addOption() {
     const newOpts = [...fd.options, ''];
-    update({ options: newOpts, correctMultiple: [...fd.correctMultiple, false] });
+    update({ options: newOpts, optionImages: [...fd.optionImages, ''], correctMultiple: [...fd.correctMultiple, false] });
   }
   function removeOption(i: number) {
     if (fd.options.length <= 2) return;
     const newOpts = fd.options.filter((_, idx) => idx !== i);
+    const newImgs = fd.optionImages.filter((_, idx) => idx !== i);
     const newCm = fd.correctMultiple.filter((_, idx) => idx !== i);
     const newCs = fd.correctSingle >= newOpts.length ? 0 : (fd.correctSingle > i ? fd.correctSingle - 1 : fd.correctSingle);
-    update({ options: newOpts, correctMultiple: newCm, correctSingle: newCs });
+    update({ options: newOpts, optionImages: newImgs, correctMultiple: newCm, correctSingle: newCs });
   }
   function setOption(i: number, val: string) {
     const newOpts = [...fd.options];
     newOpts[i] = val;
     update({ options: newOpts });
+  }
+  function setOptionImage(i: number, url: string) {
+    const arr = [...fd.optionImages];
+    arr[i] = url;
+    update({ optionImages: arr });
   }
 
   function addAcceptedAnswer() { update({ acceptedAnswers: [...fd.acceptedAnswers, ''] }); }
@@ -406,32 +426,37 @@ function QuestionConstructor({
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               {fd.options.map((opt, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <input
-                    type="radio"
-                    name="correctSingle"
-                    checked={fd.correctSingle === i}
-                    onChange={() => update({ correctSingle: i })}
-                    title="Правильный ответ"
-                  />
-                  <input
-                    type="text"
-                    className="input"
-                    value={opt}
-                    onChange={(e) => setOption(i, e.target.value)}
-                    placeholder={`Вариант ${i + 1}`}
-                    style={{ flex: 1 }}
-                  />
-                  {fd.options.length > 2 && (
-                    <button
-                      type="button"
-                      onClick={() => removeOption(i)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-danger)', fontSize: '1.125rem', padding: '0.25rem', lineHeight: 1 }}
-                      title="Удалить вариант"
-                    >
-                      &times;
-                    </button>
-                  )}
+                <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <input
+                      type="radio"
+                      name="correctSingle"
+                      checked={fd.correctSingle === i}
+                      onChange={() => update({ correctSingle: i })}
+                      title="Правильный ответ"
+                    />
+                    <input
+                      type="text"
+                      className="input"
+                      value={opt}
+                      onChange={(e) => setOption(i, e.target.value)}
+                      placeholder={`Вариант ${i + 1}`}
+                      style={{ flex: 1 }}
+                    />
+                    {fd.options.length > 2 && (
+                      <button
+                        type="button"
+                        onClick={() => removeOption(i)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-danger)', fontSize: '1.125rem', padding: '0.25rem', lineHeight: 1 }}
+                        title="Удалить вариант"
+                      >
+                        &times;
+                      </button>
+                    )}
+                  </div>
+                  <div style={{ paddingLeft: '1.5rem' }}>
+                    <ImageUpload compact value={fd.optionImages[i]} onChange={(url) => setOptionImage(i, url)} token={token} />
+                  </div>
                 </div>
               ))}
             </div>
@@ -448,35 +473,40 @@ function QuestionConstructor({
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               {fd.options.map((opt, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <input
-                    type="checkbox"
-                    checked={fd.correctMultiple[i] || false}
-                    onChange={(e) => {
-                      const cm = [...fd.correctMultiple];
-                      cm[i] = e.target.checked;
-                      update({ correctMultiple: cm });
-                    }}
-                    title="Правильный ответ"
-                  />
-                  <input
-                    type="text"
-                    className="input"
-                    value={opt}
-                    onChange={(e) => setOption(i, e.target.value)}
-                    placeholder={`Вариант ${i + 1}`}
-                    style={{ flex: 1 }}
-                  />
-                  {fd.options.length > 2 && (
-                    <button
-                      type="button"
-                      onClick={() => removeOption(i)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-danger)', fontSize: '1.125rem', padding: '0.25rem', lineHeight: 1 }}
-                      title="Удалить вариант"
-                    >
-                      &times;
-                    </button>
-                  )}
+                <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <input
+                      type="checkbox"
+                      checked={fd.correctMultiple[i] || false}
+                      onChange={(e) => {
+                        const cm = [...fd.correctMultiple];
+                        cm[i] = e.target.checked;
+                        update({ correctMultiple: cm });
+                      }}
+                      title="Правильный ответ"
+                    />
+                    <input
+                      type="text"
+                      className="input"
+                      value={opt}
+                      onChange={(e) => setOption(i, e.target.value)}
+                      placeholder={`Вариант ${i + 1}`}
+                      style={{ flex: 1 }}
+                    />
+                    {fd.options.length > 2 && (
+                      <button
+                        type="button"
+                        onClick={() => removeOption(i)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-danger)', fontSize: '1.125rem', padding: '0.25rem', lineHeight: 1 }}
+                        title="Удалить вариант"
+                      >
+                        &times;
+                      </button>
+                    )}
+                  </div>
+                  <div style={{ paddingLeft: '1.5rem' }}>
+                    <ImageUpload compact value={fd.optionImages[i]} onChange={(url) => setOptionImage(i, url)} token={token} />
+                  </div>
                 </div>
               ))}
             </div>
@@ -896,6 +926,17 @@ function QuestionConstructor({
             value={fd.text}
             onChange={(html) => update({ text: html })}
             placeholder="Введите текст вопроса..."
+            token={token ?? undefined}
+          />
+        </div>
+
+        {/* Question image */}
+        <div>
+          <label className="label">Изображение к условию (необязательно)</label>
+          <ImageUpload
+            value={fd.image}
+            onChange={(url) => update({ image: url })}
+            token={token}
           />
         </div>
 
@@ -1257,6 +1298,7 @@ export default function EditTestPage() {
                 onSave={(fd) => handleUpdateQuestion(q.id, fd)}
                 onCancel={() => setEditingQuestionId(null)}
                 saving={savingQuestion}
+                token={token!}
               />
             ) : (
               <div
@@ -1343,6 +1385,7 @@ export default function EditTestPage() {
           onSave={handleAddQuestion}
           onCancel={() => setAddingQuestion(false)}
           saving={savingQuestion}
+          token={token!}
         />
       )}
     </div>
