@@ -4,7 +4,14 @@ import { useState } from 'react';
 import HtmlContent from '@/components/ui/HtmlContent';
 
 interface Props {
-  content: { text: string; left: string[]; right: string[]; image?: string };
+  content: {
+    text: string;
+    left: string[];
+    right: string[];
+    image?: string;
+    left_images?: string[];
+    right_images?: string[];
+  };
   value: unknown;
   onChange: (value: unknown) => void;
   disabled?: boolean;
@@ -13,6 +20,23 @@ interface Props {
 export default function Matching({ content, value, onChange, disabled }: Props) {
   const matches = (value as Record<string, string>) || {};
   const [selectedLeft, setSelectedLeft] = useState<string | null>(null);
+
+  // Стабильная перестановка для правой колонки. В режиме disabled (предпросмотр/результаты)
+  // показываем исходный порядок, иначе шафлим один раз при монтировании.
+  const [rightOrder] = useState<number[]>(() => {
+    const n = content.right.length;
+    const arr = Array.from({ length: n }, (_, i) => i);
+    if (disabled) return arr;
+    for (let i = n - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    // если случайно получился исходный порядок и длина > 1 — крутанём один swap
+    if (n > 1 && arr.every((v, i) => v === i)) {
+      [arr[0], arr[1]] = [arr[1], arr[0]];
+    }
+    return arr;
+  });
 
   const handleLeftClick = (index: string) => {
     if (disabled) return;
@@ -64,6 +88,7 @@ export default function Matching({ content, value, onChange, disabled }: Props) 
           {content.left.map((item, i) => {
             const idx = String(i);
             const matched = getMatchedRight(idx);
+            const img = content.left_images?.[i];
             return (
               <button
                 key={i}
@@ -77,6 +102,10 @@ export default function Matching({ content, value, onChange, disabled }: Props) 
                     : 'border-gray-200 hover:border-gray-300 bg-white'
                 } disabled:cursor-not-allowed`}
               >
+                {img && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={img} alt="" style={{ maxWidth: '100%', maxHeight: 140, borderRadius: 6, marginBottom: item ? 6 : 0, display: 'block' }} />
+                )}
                 {item}
               </button>
             );
@@ -85,12 +114,14 @@ export default function Matching({ content, value, onChange, disabled }: Props) 
 
         {/* Right column */}
         <div className="space-y-2">
-          {content.right.map((item, i) => {
-            const idx = String(i);
+          {rightOrder.map((origIdx) => {
+            const item = content.right[origIdx];
+            const idx = String(origIdx);
             const usedByLeft = Object.entries(matches).find(([, v]) => v === idx)?.[0];
+            const img = content.right_images?.[origIdx];
             return (
               <button
-                key={i}
+                key={origIdx}
                 onClick={() => handleRightClick(idx)}
                 disabled={disabled || (isRightUsed(idx) && selectedLeft === null)}
                 className={`w-full text-left p-3 rounded-xl border-2 text-sm transition-all ${
@@ -101,6 +132,10 @@ export default function Matching({ content, value, onChange, disabled }: Props) 
                     : 'border-gray-200 bg-white'
                 } disabled:cursor-not-allowed`}
               >
+                {img && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={img} alt="" style={{ maxWidth: '100%', maxHeight: 140, borderRadius: 6, marginBottom: item ? 6 : 0, display: 'block' }} />
+                )}
                 {item}
               </button>
             );

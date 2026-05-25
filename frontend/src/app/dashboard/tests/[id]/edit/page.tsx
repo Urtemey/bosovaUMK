@@ -74,6 +74,8 @@ interface QuestionFormData {
   // matching
   leftItems: string[];
   rightItems: string[];
+  leftImages: string[];
+  rightImages: string[];
   // drag_drop
   dragItems: string[];
   dragSlots: string[];
@@ -103,6 +105,8 @@ function emptyFormData(type: QuestionType): QuestionFormData {
     acceptedAnswers: [''],
     leftItems: ['', ''],
     rightItems: ['', ''],
+    leftImages: ['', ''],
+    rightImages: ['', ''],
     dragItems: ['', ''],
     dragSlots: ['', ''],
     dragCorrect: { '0': '0', '1': '1' },
@@ -149,6 +153,8 @@ function formDataFromQuestion(q: Question): QuestionFormData {
     case 'matching': {
       fd.leftItems = (content.left as string[]) || ['', ''];
       fd.rightItems = (content.right as string[]) || ['', ''];
+      fd.leftImages = fd.leftItems.map((_, i) => (content.left_images as string[])?.[i] || '');
+      fd.rightImages = fd.rightItems.map((_, i) => (content.right_images as string[])?.[i] || '');
       break;
     }
     case 'drag_drop': {
@@ -211,7 +217,14 @@ function buildPayload(fd: QuestionFormData): { question_type: string; content: R
       fd.leftItems.forEach((_, i) => { correct[String(i)] = String(i); });
       return {
         ...base,
-        content: { text: fd.text, left: fd.leftItems, right: fd.rightItems, ...img },
+        content: {
+          text: fd.text,
+          left: fd.leftItems,
+          right: fd.rightItems,
+          left_images: fd.leftImages,
+          right_images: fd.rightImages,
+          ...img,
+        },
         correct_answer: correct,
       };
     }
@@ -335,13 +348,27 @@ function QuestionConstructor({
     update({ acceptedAnswers: arr });
   }
 
-  function addLeftItem() { update({ leftItems: [...fd.leftItems, ''], rightItems: [...fd.rightItems, ''] }); }
+  function addLeftItem() {
+    update({
+      leftItems: [...fd.leftItems, ''],
+      rightItems: [...fd.rightItems, ''],
+      leftImages: [...fd.leftImages, ''],
+      rightImages: [...fd.rightImages, ''],
+    });
+  }
   function removeMatchingPair(i: number) {
     if (fd.leftItems.length <= 2) return;
-    update({ leftItems: fd.leftItems.filter((_, idx) => idx !== i), rightItems: fd.rightItems.filter((_, idx) => idx !== i) });
+    update({
+      leftItems: fd.leftItems.filter((_, idx) => idx !== i),
+      rightItems: fd.rightItems.filter((_, idx) => idx !== i),
+      leftImages: fd.leftImages.filter((_, idx) => idx !== i),
+      rightImages: fd.rightImages.filter((_, idx) => idx !== i),
+    });
   }
   function setLeftItem(i: number, val: string) { const arr = [...fd.leftItems]; arr[i] = val; update({ leftItems: arr }); }
   function setRightItem(i: number, val: string) { const arr = [...fd.rightItems]; arr[i] = val; update({ rightItems: arr }); }
+  function setLeftImage(i: number, url: string) { const arr = [...fd.leftImages]; arr[i] = url; update({ leftImages: arr }); }
+  function setRightImage(i: number, url: string) { const arr = [...fd.rightImages]; arr[i] = url; update({ rightImages: arr }); }
 
   function addDragItem() {
     const newItems = [...fd.dragItems, ''];
@@ -556,36 +583,48 @@ function QuestionConstructor({
               <span className="label">Пары соответствий</span>
               <button type="button" className="btn btn-ghost btn-sm" onClick={addLeftItem}>+ Добавить пару</button>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {fd.leftItems.map((_, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <input
-                    type="text"
-                    className="input"
-                    value={fd.leftItems[i]}
-                    onChange={(e) => setLeftItem(i, e.target.value)}
-                    placeholder={`Левый ${i + 1}`}
-                    style={{ flex: 1 }}
-                  />
-                  <span style={{ color: 'var(--color-text-muted)', fontWeight: 700, fontSize: '1.25rem' }}>&harr;</span>
-                  <input
-                    type="text"
-                    className="input"
-                    value={fd.rightItems[i]}
-                    onChange={(e) => setRightItem(i, e.target.value)}
-                    placeholder={`Правый ${i + 1}`}
-                    style={{ flex: 1 }}
-                  />
-                  {fd.leftItems.length > 2 && (
-                    <button
-                      type="button"
-                      onClick={() => removeMatchingPair(i)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-danger)', fontSize: '1.125rem', padding: '0.25rem', lineHeight: 1 }}
-                      title="Удалить пару"
-                    >
-                      &times;
-                    </button>
-                  )}
+                <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', padding: '0.625rem', border: '1px solid var(--color-border)', borderRadius: 8, background: 'var(--color-surface-2)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <input
+                      type="text"
+                      className="input"
+                      value={fd.leftItems[i]}
+                      onChange={(e) => setLeftItem(i, e.target.value)}
+                      placeholder={`Левый ${i + 1}`}
+                      style={{ flex: 1 }}
+                    />
+                    <span style={{ color: 'var(--color-text-muted)', fontWeight: 700, fontSize: '1.25rem' }}>&harr;</span>
+                    <input
+                      type="text"
+                      className="input"
+                      value={fd.rightItems[i]}
+                      onChange={(e) => setRightItem(i, e.target.value)}
+                      placeholder={`Правый ${i + 1}`}
+                      style={{ flex: 1 }}
+                    />
+                    {fd.leftItems.length > 2 && (
+                      <button
+                        type="button"
+                        onClick={() => removeMatchingPair(i)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-danger)', fontSize: '1.125rem', padding: '0.25rem', lineHeight: 1 }}
+                        title="Удалить пару"
+                      >
+                        &times;
+                      </button>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                    <div style={{ flex: 1 }}>
+                      <ImageUpload compact value={fd.leftImages[i]} onChange={(url) => setLeftImage(i, url)} token={token} />
+                    </div>
+                    <span style={{ width: '1rem' }} />
+                    <div style={{ flex: 1 }}>
+                      <ImageUpload compact value={fd.rightImages[i]} onChange={(url) => setRightImage(i, url)} token={token} />
+                    </div>
+                    {fd.leftItems.length > 2 && <span style={{ width: '1.625rem' }} />}
+                  </div>
                 </div>
               ))}
             </div>
