@@ -74,6 +74,7 @@ function TestCard({ test, index, assignClassroom }: { test: Test; index: number;
 
       <div className="test-card-body">
         <h3
+          title={test.title}
           style={{
             fontSize: '0.9375rem',
             fontWeight: 700,
@@ -81,9 +82,10 @@ function TestCard({ test, index, assignClassroom }: { test: Test; index: number;
             color: 'var(--color-text-primary)',
             marginTop: '0.125rem',
             display: '-webkit-box',
-            WebkitLineClamp: 2,
+            WebkitLineClamp: 3,
             WebkitBoxOrient: 'vertical',
             overflow: 'hidden',
+            minHeight: 'calc(0.9375rem * 1.4 * 3)',
           } as React.CSSProperties}
         >
           {test.title}
