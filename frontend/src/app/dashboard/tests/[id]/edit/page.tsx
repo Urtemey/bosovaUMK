@@ -1084,6 +1084,21 @@ export default function EditTestPage() {
     loadTest();
   }, [token, role, router, loadTest, authLoading]);
 
+  async function handleTogglePublished(next: boolean) {
+    if (!test) return;
+    const prev = test.is_published;
+    setTest({ ...test, is_published: next });
+    setInfoPublished(next);
+    try {
+      await testsApi.update(token!, testId, { is_published: next });
+      showToast(next ? 'Тест опубликован' : 'Тест переведён в черновик');
+    } catch (err) {
+      setTest({ ...test, is_published: prev });
+      setInfoPublished(prev);
+      setError(err instanceof Error ? err.message : 'Не удалось изменить статус');
+    }
+  }
+
   async function handleSaveInfo() {
     setSavingInfo(true);
     setError('');
@@ -1199,17 +1214,60 @@ export default function EditTestPage() {
                     <span className="t-caption">{test.topic}</span>
                   </>
                 )}
-                <span className="t-caption" style={{ color: 'var(--color-border-strong)' }}>&middot;</span>
-                <span className="t-caption" style={{ color: test.is_published ? 'var(--color-ok)' : 'var(--color-text-muted)' }}>
-                  {test.is_published ? 'Опубликован' : 'Черновик'}
-                </span>
               </div>
               <h1 className="t-display" style={{ fontSize: 'clamp(1.375rem, 3vw, 1.75rem)' }}>{test.title}</h1>
               {test.description && <p className="t-body" style={{ marginTop: '0.375rem' }}>{test.description}</p>}
             </div>
-            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEditingInfo(true)}>
-              Редактировать
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <label
+                title={test.is_published ? 'Виден в каталоге всем учителям' : 'Не виден в каталоге'}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', userSelect: 'none' }}
+              >
+                <span
+                  className="t-caption"
+                  style={{
+                    fontWeight: 600,
+                    color: test.is_published ? 'var(--color-ok)' : 'var(--color-text-muted)',
+                  }}
+                >
+                  {test.is_published ? 'Опубликован' : 'Черновик'}
+                </span>
+                <span
+                  style={{
+                    position: 'relative',
+                    width: 38,
+                    height: 22,
+                    background: test.is_published ? 'var(--color-ok)' : 'var(--color-border-strong)',
+                    borderRadius: 999,
+                    transition: 'background 0.15s ease',
+                    flexShrink: 0,
+                  }}
+                >
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: 2,
+                      left: test.is_published ? 18 : 2,
+                      width: 18,
+                      height: 18,
+                      background: '#fff',
+                      borderRadius: '50%',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                      transition: 'left 0.15s ease',
+                    }}
+                  />
+                </span>
+                <input
+                  type="checkbox"
+                  checked={test.is_published}
+                  onChange={(e) => handleTogglePublished(e.target.checked)}
+                  style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}
+                />
+              </label>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEditingInfo(true)}>
+                Редактировать
+              </button>
+            </div>
           </div>
         </div>
       ) : (
