@@ -1184,6 +1184,54 @@ input[type="radio"]:hover:not(:checked):not(:disabled) {
 .test-card:hover .test-card-footer {
   color: var(--color-text-secondary);
 }
+.test-card-delete-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid rgba(196, 65, 51, 0.18);
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--color-danger);
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(-2px);
+  transition: opacity 0.18s ease, transform 0.18s ease, background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+  z-index: 2;
+  padding: 0;
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+.test-card:hover .test-card-delete-btn,
+.test-card:focus-within .test-card-delete-btn {
+  opacity: 1;
+  transform: translateY(0);
+}
+.test-card-delete-btn:hover {
+  background: var(--color-danger);
+  color: #fff;
+  border-color: var(--color-danger);
+}
+.test-card-delete-btn:focus-visible {
+  opacity: 1;
+  transform: translateY(0);
+  outline: 2px solid var(--color-danger);
+  outline-offset: 2px;
+}
+.test-card-delete-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+@media (hover: none) {
+  .test-card-delete-btn {
+    opacity: 1;
+    transform: none;
+  }
+}
 
 
 /* ═══════════════════════════════════════════════════════════════

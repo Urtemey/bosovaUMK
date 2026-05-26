@@ -41,15 +41,31 @@ function pluralQuestions(n: number) {
   return `${n} вопросов`;
 }
 
-function DashboardTestCard({ test, index }: { test: Test; index: number }) {
+function DashboardTestCard({
+  test,
+  index,
+  onDelete,
+  deleting,
+}: {
+  test: Test;
+  index: number;
+  onDelete: (test: Test) => void;
+  deleting: boolean;
+}) {
   const bg = GRADE_BG[test.grade] ?? '#f0fdfa';
   const color = GRADE_COLOR[test.grade] ?? '#2b4c7e';
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onDelete(test);
+  };
 
   return (
     <Link
       href={`/test/${test.id}`}
       className="test-card animate-fade-up"
-      style={{ animationDelay: `${0.04 * Math.min(index, 10)}s` }}
+      style={{ animationDelay: `${0.04 * Math.min(index, 10)}s`, opacity: deleting ? 0.5 : 1 }}
     >
       <div className="test-card-top" style={{ background: bg }}>
         <span
@@ -72,6 +88,21 @@ function DashboardTestCard({ test, index }: { test: Test; index: number }) {
           <rect x="4" y="3" width="16" height="18" rx="2" />
           <path d="M8 7h8M8 11h8M8 15h5" />
         </svg>
+        <button
+          type="button"
+          onClick={handleDelete}
+          disabled={deleting}
+          aria-label={`Удалить тест «${test.title}»`}
+          title="Удалить тест"
+          className="test-card-delete-btn"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 6h18" />
+            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+            <path d="M10 11v6M14 11v6" />
+          </svg>
+        </button>
       </div>
 
       <div className="test-card-body">
@@ -139,6 +170,26 @@ export default function DashboardPage() {
   const router = useRouter();
   const [tests, setTests] = useState<Test[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  const handleDeleteTest = async (test: Test) => {
+    if (!token) return;
+    if (deletingId !== null) return;
+    const confirmed = window.confirm(
+      `Удалить тест «${test.title}»?\n\nВместе с ним будут удалены все назначения, попытки и ответы учеников.`,
+    );
+    if (!confirmed) return;
+    setDeletingId(test.id);
+    try {
+      await testsApi.delete(token, test.id);
+      setTests((prev) => prev.filter((t) => t.id !== test.id));
+    } catch (e) {
+      console.error(e);
+      window.alert('Не удалось удалить тест. Попробуйте ещё раз.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   useEffect(() => {
     if (authLoading) return;
@@ -294,7 +345,13 @@ export default function DashboardPage() {
 
                     <div className="card-grid">
                       {gradeTests.map((test) => (
-                        <DashboardTestCard key={test.id} test={test} index={cardIndex++} />
+                        <DashboardTestCard
+                          key={test.id}
+                          test={test}
+                          index={cardIndex++}
+                          onDelete={handleDeleteTest}
+                          deleting={deletingId === test.id}
+                        />
                       ))}
                     </div>
                   </section>
