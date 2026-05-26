@@ -24,6 +24,7 @@ interface Test {
   question_count: number;
   questions: Question[];
   settings: Record<string, unknown>;
+  is_published: boolean;
 }
 
 const QUESTION_TYPE_LABELS: Record<string, string> = {
@@ -375,6 +376,8 @@ export default function TestViewPage() {
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
+  const [togglingPublish, setTogglingPublish] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assignClassroomId, setAssignClassroomId] = useState<number | null>(null);
   const autoOpenedRef = useRef(false);
@@ -418,6 +421,36 @@ export default function TestViewPage() {
       console.error(e);
       showToast(e instanceof Error ? e.message : 'Не удалось начать тест', 'error');
       setStarting(false);
+    }
+  };
+
+  const handleTogglePublished = async (next: boolean) => {
+    if (!test || !token) return;
+    const prev = test.is_published;
+    setTest({ ...test, is_published: next });
+    setTogglingPublish(true);
+    try {
+      await testsApi.update(token, test.id, { is_published: next });
+      showToast(next ? 'Тест опубликован' : 'Тест переведён в черновик');
+    } catch (e) {
+      setTest({ ...test, is_published: prev });
+      showToast(e instanceof Error ? e.message : 'Не удалось изменить статус', 'error');
+    } finally {
+      setTogglingPublish(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!test || !token) return;
+    if (!confirm(`Удалить черновик «${test.title}»? Действие необратимо.`)) return;
+    setDeleting(true);
+    try {
+      await testsApi.delete(token, test.id);
+      showToast('Черновик удалён');
+      router.push('/dashboard');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Не удалось удалить', 'error');
+      setDeleting(false);
     }
   };
 
@@ -520,35 +553,117 @@ export default function TestViewPage() {
 
       {/* Teacher actions */}
       {(role === 'teacher' || role === 'admin') && token && (
-        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            style={{ flex: 1 }}
-            onClick={() => setShowAssignModal(true)}
-          >
-            Выдать тест
-          </button>
+        <>
           {role === 'admin' && (
-            <>
-              <Link
-                href={`/dashboard/tests/${test.id}/edit`}
-                className="btn btn-secondary"
-                style={{ flex: 1, textDecoration: 'none', textAlign: 'center' }}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                padding: '0.625rem 0.875rem',
+                marginBottom: '0.75rem',
+                background: 'var(--color-surface-2)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 8,
+                flexWrap: 'wrap',
+              }}
+            >
+              <label
+                title={test.is_published ? 'Виден в каталоге всем учителям' : 'Не виден в каталоге'}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  cursor: togglingPublish ? 'wait' : 'pointer',
+                  userSelect: 'none',
+                  opacity: togglingPublish ? 0.6 : 1,
+                }}
               >
-                Редактировать
-              </Link>
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={handleDuplicate}
-                disabled={duplicating}
-              >
-                {duplicating ? 'Копирование...' : 'Дублировать'}
-              </button>
-            </>
+                <span
+                  className="t-caption"
+                  style={{
+                    fontWeight: 600,
+                    color: test.is_published ? 'var(--color-ok)' : 'var(--color-text-muted)',
+                  }}
+                >
+                  {test.is_published ? 'Опубликован' : 'Черновик'}
+                </span>
+                <span
+                  style={{
+                    position: 'relative',
+                    width: 38,
+                    height: 22,
+                    background: test.is_published ? 'var(--color-ok)' : 'var(--color-border-strong)',
+                    borderRadius: 999,
+                    transition: 'background 0.15s ease',
+                    flexShrink: 0,
+                  }}
+                >
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: 2,
+                      left: test.is_published ? 18 : 2,
+                      width: 18,
+                      height: 18,
+                      background: '#fff',
+                      borderRadius: '50%',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                      transition: 'left 0.15s ease',
+                    }}
+                  />
+                </span>
+                <input
+                  type="checkbox"
+                  checked={test.is_published}
+                  disabled={togglingPublish}
+                  onChange={(e) => handleTogglePublished(e.target.checked)}
+                  style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}
+                />
+              </label>
+              {!test.is_published && (
+                <button
+                  type="button"
+                  className="btn btn-danger btn-sm"
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  style={{ marginLeft: 'auto' }}
+                >
+                  {deleting ? 'Удаление...' : 'Удалить черновик'}
+                </button>
+              )}
+            </div>
           )}
-        </div>
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ flex: 1 }}
+              onClick={() => setShowAssignModal(true)}
+            >
+              Выдать тест
+            </button>
+            {role === 'admin' && (
+              <>
+                <Link
+                  href={`/dashboard/tests/${test.id}/edit`}
+                  className="btn btn-secondary"
+                  style={{ flex: 1, textDecoration: 'none', textAlign: 'center' }}
+                >
+                  Редактировать
+                </Link>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={handleDuplicate}
+                  disabled={duplicating}
+                >
+                  {duplicating ? 'Копирование...' : 'Дублировать'}
+                </button>
+              </>
+            )}
+          </div>
+        </>
       )}
 
       {/* Assign modal */}

@@ -1084,6 +1084,22 @@ export default function EditTestPage() {
     loadTest();
   }, [token, role, router, loadTest, authLoading]);
 
+  async function handleDeleteDraft() {
+    if (!test) return;
+    if (test.is_published) {
+      showToast('Сначала переведите тест в черновик', 'error');
+      return;
+    }
+    if (!confirm(`Удалить черновик «${test.title}»? Действие необратимо.`)) return;
+    try {
+      await testsApi.delete(token!, testId);
+      showToast('Черновик удалён');
+      router.push('/dashboard');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не удалось удалить');
+    }
+  }
+
   async function handleTogglePublished(next: boolean) {
     if (!test) return;
     const prev = test.is_published;
@@ -1267,6 +1283,11 @@ export default function EditTestPage() {
               <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEditingInfo(true)}>
                 Редактировать
               </button>
+              {!test.is_published && (
+                <button type="button" className="btn btn-danger btn-sm" onClick={handleDeleteDraft}>
+                  Удалить черновик
+                </button>
+              )}
             </div>
           </div>
         </div>
