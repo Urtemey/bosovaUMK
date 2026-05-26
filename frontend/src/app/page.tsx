@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Fragment, useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { testsApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -46,15 +46,16 @@ function pluralQ(n: number) {
   return `${n} вопросов`;
 }
 
-interface DragHandlers {
+interface DragSlot {
   draggable: boolean;
-  isDragging: boolean;
-  isDropTarget: boolean;
-  onDragStart: (e: React.DragEvent) => void;
-  onDragEnter: (e: React.DragEvent) => void;
-  onDragOver: (e: React.DragEvent) => void;
-  onDragEnd: (e: React.DragEvent) => void;
-  onDrop: (e: React.DragEvent) => void;
+  inGrid: boolean;
+  floating?: { x: number; y: number; width: number; height: number };
+  setGridRef?: (el: HTMLAnchorElement | null) => void;
+  onPointerDown?: (e: React.PointerEvent<HTMLAnchorElement>) => void;
+  onPointerMove?: (e: React.PointerEvent<HTMLAnchorElement>) => void;
+  onPointerUp?: (e: React.PointerEvent<HTMLAnchorElement>) => void;
+  onPointerCancel?: (e: React.PointerEvent<HTMLAnchorElement>) => void;
+  onClickCapture?: (e: React.MouseEvent) => void;
 }
 
 function TestCard({
@@ -66,7 +67,7 @@ function TestCard({
   test: Test;
   index: number;
   assignClassroom: number | null;
-  drag?: DragHandlers;
+  drag?: DragSlot;
 }) {
   const bg = GRADE_BG[test.grade] ?? '#f0fdfa';
   const color = GRADE_COLOR[test.grade] ?? '#2b4c7e';
@@ -74,26 +75,54 @@ function TestCard({
     ? `/test/${test.id}?assign_classroom=${assignClassroom}`
     : `/test/${test.id}`;
 
+  const floating = drag?.floating;
+
   const dragStyle: React.CSSProperties = drag
-    ? {
-        opacity: drag.isDragging ? 0.4 : 1,
-        outline: drag.isDropTarget ? '2px dashed var(--color-accent)' : undefined,
-        outlineOffset: drag.isDropTarget ? 2 : undefined,
-        cursor: drag.draggable ? 'grab' : 'pointer',
-      }
+    ? floating
+      ? {
+          position: 'fixed',
+          left: floating.x,
+          top: floating.y,
+          width: floating.width,
+          height: floating.height,
+          margin: 0,
+          zIndex: 1000,
+          transform: 'scale(1.04) rotate(-1.5deg)',
+          boxShadow:
+            '0 30px 60px rgba(26, 31, 37, 0.28), 0 12px 28px rgba(43, 76, 126, 0.18)',
+          cursor: 'grabbing',
+          transition: 'transform 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms',
+          willChange: 'transform, left, top',
+          userSelect: 'none',
+        }
+      : {
+          cursor: drag.draggable ? 'grab' : 'pointer',
+          touchAction: drag.draggable ? 'none' : undefined,
+          userSelect: drag.draggable ? 'none' : undefined,
+        }
     : {};
+
+  const refCallback = drag
+    ? (el: HTMLAnchorElement | null) => {
+        if (drag.inGrid && drag.setGridRef) drag.setGridRef(el);
+      }
+    : undefined;
 
   return (
     <Link
       href={href}
+      ref={refCallback as never}
       className="test-card animate-fade-up"
-      style={{ animationDelay: `${0.05 * Math.min(index, 8)}s`, ...dragStyle }}
-      draggable={drag?.draggable}
-      onDragStart={drag?.onDragStart}
-      onDragEnter={drag?.onDragEnter}
-      onDragOver={drag?.onDragOver}
-      onDragEnd={drag?.onDragEnd}
-      onDrop={drag?.onDrop}
+      style={{
+        animationDelay: floating ? undefined : `${0.05 * Math.min(index, 8)}s`,
+        ...dragStyle,
+      }}
+      onPointerDown={drag?.onPointerDown}
+      onPointerMove={drag?.onPointerMove}
+      onPointerUp={drag?.onPointerUp}
+      onPointerCancel={drag?.onPointerCancel}
+      onClickCapture={drag?.onClickCapture}
+      draggable={false}
     >
       <div className="test-card-top" style={{ background: bg }}>
         <span
@@ -173,9 +202,25 @@ export default function HomePage() {
   const [assignClassroom, setAssignClassroom] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const { user, role, token } = useAuth();
-  const [dragSrc, setDragSrc] = useState<number | null>(null);
-  const [dragOver, setDragOver] = useState<number | null>(null);
   const canReorder = role === 'admin' && !assignClassroom;
+
+  const cardRefs = useRef<Map<number, HTMLElement>>(new Map());
+  const dragRef = useRef<{
+    testId: number;
+    pointerId: number;
+    startX: number;
+    startY: number;
+    offsetX: number;
+    offsetY: number;
+    width: number;
+    height: number;
+    moved: boolean;
+  } | null>(null);
+  const justDraggedRef = useRef(false);
+  const [drag, setDrag] = useState<
+    | { testId: number; x: number; y: number; width: number; height: number }
+    | null
+  >(null);
 
   const persistOrder = async (grade: number, list: Test[]) => {
     if (!token) return;
@@ -183,6 +228,132 @@ export default function HomePage() {
       await testsApi.reorder(token, grade, list.map((t) => t.id));
     } catch (e) {
       console.error('Не удалось сохранить порядок тестов', e);
+    }
+  };
+
+  const animateShifts = (prevRects: Map<number, DOMRect>) => {
+    requestAnimationFrame(() => {
+      prevRects.forEach((prevRect, id) => {
+        const el = cardRefs.current.get(id);
+        if (!el) return;
+        const newRect = el.getBoundingClientRect();
+        const dx = prevRect.left - newRect.left;
+        const dy = prevRect.top - newRect.top;
+        if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
+        el.style.transition = 'none';
+        el.style.transform = `translate(${dx}px, ${dy}px)`;
+        void el.offsetWidth;
+        el.style.transition = 'transform 280ms cubic-bezier(0.22, 1, 0.36, 1)';
+        el.style.transform = '';
+      });
+    });
+  };
+
+  const handlePointerDown = (
+    e: React.PointerEvent<HTMLAnchorElement>,
+    test: Test,
+  ) => {
+    if (!canReorder) return;
+    if (e.button !== 0) return;
+    const el = e.currentTarget;
+    const rect = el.getBoundingClientRect();
+    try {
+      el.setPointerCapture(e.pointerId);
+    } catch {}
+    dragRef.current = {
+      testId: test.id,
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      offsetX: e.clientX - rect.left,
+      offsetY: e.clientY - rect.top,
+      width: rect.width,
+      height: rect.height,
+      moved: false,
+    };
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLAnchorElement>) => {
+    const s = dragRef.current;
+    if (!s || e.pointerId !== s.pointerId) return;
+
+    if (!s.moved) {
+      const dist = Math.hypot(e.clientX - s.startX, e.clientY - s.startY);
+      if (dist < 6) return;
+      s.moved = true;
+      document.body.style.cursor = 'grabbing';
+    }
+
+    e.preventDefault();
+    setDrag({
+      testId: s.testId,
+      x: e.clientX - s.offsetX,
+      y: e.clientY - s.offsetY,
+      width: s.width,
+      height: s.height,
+    });
+
+    const list = testsByGrade[selectedGrade] || [];
+    const srcIdx = list.findIndex((t) => t.id === s.testId);
+    if (srcIdx === -1) return;
+
+    let targetIdx = -1;
+    for (let i = 0; i < list.length; i++) {
+      if (i === srcIdx) continue;
+      const el = cardRefs.current.get(list[i].id);
+      if (!el) continue;
+      const r = el.getBoundingClientRect();
+      if (
+        e.clientX >= r.left &&
+        e.clientX <= r.right &&
+        e.clientY >= r.top &&
+        e.clientY <= r.bottom
+      ) {
+        targetIdx = i;
+        break;
+      }
+    }
+
+    if (targetIdx === -1 || targetIdx === srcIdx) return;
+
+    const prevRects = new Map<number, DOMRect>();
+    cardRefs.current.forEach((el, id) => {
+      if (el) prevRects.set(id, el.getBoundingClientRect());
+    });
+
+    const next = [...list];
+    const [moved] = next.splice(srcIdx, 1);
+    next.splice(targetIdx, 0, moved);
+    setTestsByGrade((prev) => ({ ...prev, [selectedGrade]: next }));
+    animateShifts(prevRects);
+  };
+
+  const finishDrag = (e: React.PointerEvent<HTMLAnchorElement>, persist: boolean) => {
+    const s = dragRef.current;
+    if (!s || e.pointerId !== s.pointerId) return;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {}
+    const wasMoved = s.moved;
+    dragRef.current = null;
+    setDrag(null);
+    document.body.style.cursor = '';
+    if (wasMoved) {
+      justDraggedRef.current = true;
+      setTimeout(() => {
+        justDraggedRef.current = false;
+      }, 50);
+      if (persist) {
+        const list = testsByGrade[selectedGrade] || [];
+        void persistOrder(selectedGrade, list);
+      }
+    }
+  };
+
+  const handleClickCapture = (e: React.MouseEvent) => {
+    if (justDraggedRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
     }
   };
 
@@ -387,50 +558,50 @@ export default function HomePage() {
               </div>
             ) : (
               tests.map((test, idx) => {
-                const drag: DragHandlers | undefined = canReorder
+                const isDragged = drag?.testId === test.id;
+                const slot: DragSlot | undefined = canReorder
                   ? {
                       draggable: true,
-                      isDragging: dragSrc === idx,
-                      isDropTarget: dragOver === idx && dragSrc !== null && dragSrc !== idx,
-                      onDragStart: (e) => {
-                        setDragSrc(idx);
-                        e.dataTransfer.effectAllowed = 'move';
-                        try { e.dataTransfer.setData('text/plain', String(test.id)); } catch {}
+                      inGrid: !isDragged,
+                      floating: isDragged
+                        ? { x: drag!.x, y: drag!.y, width: drag!.width, height: drag!.height }
+                        : undefined,
+                      setGridRef: (el) => {
+                        if (el) cardRefs.current.set(test.id, el);
+                        else cardRefs.current.delete(test.id);
                       },
-                      onDragEnter: (e) => {
-                        e.preventDefault();
-                        if (dragSrc !== null) setDragOver(idx);
-                      },
-                      onDragOver: (e) => {
-                        e.preventDefault();
-                        e.dataTransfer.dropEffect = 'move';
-                      },
-                      onDrop: (e) => {
-                        e.preventDefault();
-                        if (dragSrc === null || dragSrc === idx) return;
-                        const current = testsByGrade[selectedGrade] || [];
-                        const next = [...current];
-                        const [moved] = next.splice(dragSrc, 1);
-                        next.splice(idx, 0, moved);
-                        setTestsByGrade((prev) => ({ ...prev, [selectedGrade]: next }));
-                        setDragSrc(null);
-                        setDragOver(null);
-                        void persistOrder(selectedGrade, next);
-                      },
-                      onDragEnd: () => {
-                        setDragSrc(null);
-                        setDragOver(null);
-                      },
+                      onPointerDown: (e) => handlePointerDown(e, test),
+                      onPointerMove: handlePointerMove,
+                      onPointerUp: (e) => finishDrag(e, true),
+                      onPointerCancel: (e) => finishDrag(e, false),
+                      onClickCapture: handleClickCapture,
                     }
                   : undefined;
                 return (
-                  <TestCard
-                    key={test.id}
-                    test={test}
-                    index={idx}
-                    assignClassroom={assignClassroom}
-                    drag={drag}
-                  />
+                  <Fragment key={test.id}>
+                    {isDragged && drag && (
+                      <div
+                        ref={(el) => {
+                          if (el) cardRefs.current.set(test.id, el);
+                          else cardRefs.current.delete(test.id);
+                        }}
+                        aria-hidden
+                        style={{
+                          height: drag.height,
+                          border: '2px dashed var(--color-accent)',
+                          borderRadius: 16,
+                          background: 'rgba(43, 76, 126, 0.06)',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    )}
+                    <TestCard
+                      test={test}
+                      index={idx}
+                      assignClassroom={assignClassroom}
+                      drag={slot}
+                    />
+                  </Fragment>
                 );
               })
             )}
