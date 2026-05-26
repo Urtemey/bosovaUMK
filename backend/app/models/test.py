@@ -12,6 +12,7 @@ class Test(db.Model):
     description = db.Column(db.Text, nullable=True)
     created_by = db.Column(db.Integer, db.ForeignKey('teachers.id'), nullable=True)
     is_published = db.Column(db.Boolean, default=False)
+    display_order = db.Column(db.Integer, nullable=False, default=0, index=True)
     settings = db.Column(db.JSON, default=dict)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -46,6 +47,7 @@ class Test(db.Model):
             'topic': self.topic,
             'description': self.description,
             'is_published': self.is_published,
+            'display_order': self.display_order,
             'settings': self.get_settings(),
             'question_count': self.questions.count(),
             'created_at': self.created_at.isoformat(),

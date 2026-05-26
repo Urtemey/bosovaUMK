@@ -17,9 +17,33 @@ def list_tests():
     query = Test.query
     if grade:
         query = query.filter_by(grade=grade)
-    query = query.filter_by(is_published=True).order_by(Test.grade, Test.id)
+    query = query.filter_by(is_published=True).order_by(Test.grade, Test.display_order, Test.id)
     tests = query.all()
     return jsonify([t.to_dict() for t in tests])
+
+
+@tests_bp.route('/reorder', methods=['POST'])
+@jwt_required()
+def reorder_tests():
+    teacher_id, error = require_role('admin')
+    if error:
+        return error
+
+    data = request.get_json() or {}
+    grade = data.get('grade')
+    order = data.get('order')
+    if not isinstance(grade, int) or not isinstance(order, list):
+        return jsonify({'error': 'grade (int) и order (list[int]) обязательны'}), 400
+
+    tests = Test.query.filter(Test.grade == grade, Test.id.in_(order)).all()
+    by_id = {t.id: t for t in tests}
+    for index, tid in enumerate(order):
+        test = by_id.get(int(tid))
+        if test is not None:
+            test.display_order = index
+
+    db.session.commit()
+    return jsonify({'message': 'Порядок обновлён', 'count': len(by_id)})
 
 
 @tests_bp.route('/my', methods=['GET'])
@@ -28,7 +52,7 @@ def list_my_tests():
     teacher_id, error = require_role('admin')
     if error:
         return error
-    tests = Test.query.filter_by(created_by=teacher_id).order_by(Test.grade, Test.id).all()
+    tests = Test.query.filter_by(created_by=teacher_id).order_by(Test.grade, Test.display_order, Test.id).all()
     return jsonify([t.to_dict() for t in tests])
 
 

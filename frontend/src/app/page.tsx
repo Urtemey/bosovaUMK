@@ -46,18 +46,54 @@ function pluralQ(n: number) {
   return `${n} вопросов`;
 }
 
-function TestCard({ test, index, assignClassroom }: { test: Test; index: number; assignClassroom: number | null }) {
+interface DragHandlers {
+  draggable: boolean;
+  isDragging: boolean;
+  isDropTarget: boolean;
+  onDragStart: (e: React.DragEvent) => void;
+  onDragEnter: (e: React.DragEvent) => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDragEnd: (e: React.DragEvent) => void;
+  onDrop: (e: React.DragEvent) => void;
+}
+
+function TestCard({
+  test,
+  index,
+  assignClassroom,
+  drag,
+}: {
+  test: Test;
+  index: number;
+  assignClassroom: number | null;
+  drag?: DragHandlers;
+}) {
   const bg = GRADE_BG[test.grade] ?? '#f0fdfa';
   const color = GRADE_COLOR[test.grade] ?? '#2b4c7e';
   const href = assignClassroom
     ? `/test/${test.id}?assign_classroom=${assignClassroom}`
     : `/test/${test.id}`;
 
+  const dragStyle: React.CSSProperties = drag
+    ? {
+        opacity: drag.isDragging ? 0.4 : 1,
+        outline: drag.isDropTarget ? '2px dashed var(--color-accent)' : undefined,
+        outlineOffset: drag.isDropTarget ? 2 : undefined,
+        cursor: drag.draggable ? 'grab' : 'pointer',
+      }
+    : {};
+
   return (
     <Link
       href={href}
       className="test-card animate-fade-up"
-      style={{ animationDelay: `${0.05 * Math.min(index, 8)}s` }}
+      style={{ animationDelay: `${0.05 * Math.min(index, 8)}s`, ...dragStyle }}
+      draggable={drag?.draggable}
+      onDragStart={drag?.onDragStart}
+      onDragEnter={drag?.onDragEnter}
+      onDragOver={drag?.onDragOver}
+      onDragEnd={drag?.onDragEnd}
+      onDrop={drag?.onDrop}
     >
       <div className="test-card-top" style={{ background: bg }}>
         <span
@@ -136,7 +172,19 @@ export default function HomePage() {
   const [selectedGrade, setSelectedGrade] = useState<number>(5);
   const [assignClassroom, setAssignClassroom] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
-  const { user, role } = useAuth();
+  const { user, role, token } = useAuth();
+  const [dragSrc, setDragSrc] = useState<number | null>(null);
+  const [dragOver, setDragOver] = useState<number | null>(null);
+  const canReorder = role === 'admin' && !assignClassroom;
+
+  const persistOrder = async (grade: number, list: Test[]) => {
+    if (!token) return;
+    try {
+      await testsApi.reorder(token, grade, list.map((t) => t.id));
+    } catch (e) {
+      console.error('Не удалось сохранить порядок тестов', e);
+    }
+  };
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -315,6 +363,14 @@ export default function HomePage() {
               </span>
             )}
           </div>
+          {canReorder && !loading && tests.length > 1 && (
+            <p
+              className="t-caption"
+              style={{ marginTop: '-0.5rem', marginBottom: '1rem', color: 'var(--color-text-muted)' }}
+            >
+              Перетащите карточку, чтобы изменить порядок отображения в каталоге.
+            </p>
+          )}
 
           {/* Cards grid */}
           <div className="card-grid">
@@ -330,7 +386,53 @@ export default function HomePage() {
                 </p>
               </div>
             ) : (
-              tests.map((test, idx) => <TestCard key={test.id} test={test} index={idx} assignClassroom={assignClassroom} />)
+              tests.map((test, idx) => {
+                const drag: DragHandlers | undefined = canReorder
+                  ? {
+                      draggable: true,
+                      isDragging: dragSrc === idx,
+                      isDropTarget: dragOver === idx && dragSrc !== null && dragSrc !== idx,
+                      onDragStart: (e) => {
+                        setDragSrc(idx);
+                        e.dataTransfer.effectAllowed = 'move';
+                        try { e.dataTransfer.setData('text/plain', String(test.id)); } catch {}
+                      },
+                      onDragEnter: (e) => {
+                        e.preventDefault();
+                        if (dragSrc !== null) setDragOver(idx);
+                      },
+                      onDragOver: (e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                      },
+                      onDrop: (e) => {
+                        e.preventDefault();
+                        if (dragSrc === null || dragSrc === idx) return;
+                        const current = testsByGrade[selectedGrade] || [];
+                        const next = [...current];
+                        const [moved] = next.splice(dragSrc, 1);
+                        next.splice(idx, 0, moved);
+                        setTestsByGrade((prev) => ({ ...prev, [selectedGrade]: next }));
+                        setDragSrc(null);
+                        setDragOver(null);
+                        void persistOrder(selectedGrade, next);
+                      },
+                      onDragEnd: () => {
+                        setDragSrc(null);
+                        setDragOver(null);
+                      },
+                    }
+                  : undefined;
+                return (
+                  <TestCard
+                    key={test.id}
+                    test={test}
+                    index={idx}
+                    assignClassroom={assignClassroom}
+                    drag={drag}
+                  />
+                );
+              })
             )}
           </div>
         </div>
