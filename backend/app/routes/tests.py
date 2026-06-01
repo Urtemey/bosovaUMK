@@ -161,14 +161,8 @@ def duplicate_test(test_id):
     return jsonify(new_test.to_dict(include_questions=True)), 201
 
 
-@tests_bp.route('/<int:test_id>', methods=['DELETE'])
-@jwt_required()
-def delete_test(test_id):
-    teacher_id, error = require_role('admin')
-    if error:
-        return error
-    test = Test.query.filter_by(id=test_id, created_by=teacher_id).first_or_404()
-
+def _cascade_delete_test(test):
+    """Delete a test and everything referencing it. Does NOT commit."""
     # Delete answers for all attempts of this test
     attempt_ids = [a.id for a in TestAttempt.query.filter_by(test_id=test.id).all()]
     if attempt_ids:
@@ -188,8 +182,99 @@ def delete_test(test_id):
     # Delete questions and test
     Question.query.filter_by(test_id=test.id).delete(synchronize_session=False)
     db.session.delete(test)
+
+
+@tests_bp.route('/<int:test_id>', methods=['DELETE'])
+@jwt_required()
+def delete_test(test_id):
+    teacher_id, error = require_role('admin')
+    if error:
+        return error
+    test = Test.query.filter_by(id=test_id, created_by=teacher_id).first_or_404()
+
+    _cascade_delete_test(test)
     db.session.commit()
     return jsonify({'message': 'Тест удалён'})
+
+
+@tests_bp.route('/<int:test_id>/split', methods=['POST'])
+@jwt_required()
+def split_test(test_id):
+    """Split a test into several new tests by question ranges.
+
+    Body: {
+      "segments": [{"title": str, "start": int, "end": int}, ...],  # 1-based inclusive
+      "delete_original": bool
+    }
+    Returns the list of created tests.
+    """
+    teacher_id, error = require_role('admin')
+    if error:
+        return error
+    original = Test.query.filter_by(id=test_id, created_by=teacher_id).first_or_404()
+
+    data = request.get_json() or {}
+    segments = data.get('segments')
+
+    if not isinstance(segments, list) or len(segments) < 2:
+        return jsonify({'error': 'Нужно указать минимум 2 части'}), 400
+
+    questions = original.questions.order_by(Question.order).all()
+    n = len(questions)
+    if n < 2:
+        return jsonify({'error': 'В тесте должно быть минимум 2 вопроса для разделения'}), 400
+
+    normalized = []
+    for seg in segments:
+        if not isinstance(seg, dict):
+            return jsonify({'error': 'Некорректный формат части'}), 400
+        title = (seg.get('title') or '').strip()
+        if not title:
+            return jsonify({'error': 'У каждой части должно быть название'}), 400
+        try:
+            start = int(seg.get('start'))
+            end = int(seg.get('end'))
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Некорректные границы части'}), 400
+        if not (1 <= start <= end <= n):
+            return jsonify({'error': f'Границы части должны быть в диапазоне 1..{n}'}), 400
+        normalized.append((title, start, end))
+
+    base_order = db.session.query(db.func.max(Test.display_order)).filter_by(grade=original.grade).scalar() or 0
+
+    new_tests = []
+    for offset, (title, start, end) in enumerate(normalized, start=1):
+        new_test = Test(
+            title=title,
+            grade=original.grade,
+            topic=original.topic,
+            description=original.description,
+            created_by=teacher_id,
+            settings=dict(original.settings) if original.settings else {},
+            is_published=False,
+            display_order=base_order + offset,
+        )
+        db.session.add(new_test)
+        db.session.flush()
+
+        for new_order, q in enumerate(questions[start - 1:end], start=1):
+            db.session.add(Question(
+                test_id=new_test.id,
+                order=new_order,
+                question_type=q.question_type,
+                content=q.content,
+                correct_answer=q.correct_answer,
+                points=q.points,
+                source_id=q.source_id or q.id,
+            ))
+        new_tests.append(new_test)
+
+    # Исходный тест сохраняем, но убираем из каталога (переводим в черновик),
+    # чтобы он не дублировал новые части.
+    original.is_published = False
+
+    db.session.commit()
+    return jsonify([t.to_dict() for t in new_tests]), 201
 
 
 @tests_bp.route('/<int:test_id>/questions', methods=['POST'])

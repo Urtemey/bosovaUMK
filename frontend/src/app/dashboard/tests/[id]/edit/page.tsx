@@ -14,6 +14,7 @@ import DragDrop from '@/components/questions/DragDrop';
 import SelectFromList from '@/components/questions/SelectFromList';
 import Ordering from '@/components/questions/Ordering';
 import CodeEditor from '@/components/questions/CodeEditor';
+import NumberPairs from '@/components/questions/NumberPairs';
 import ImageUpload from '@/components/ui/ImageUpload';
 
 const RichTextEditor = dynamic(() => import('@/components/editor/RichTextEditor'), { ssr: false });
@@ -41,7 +42,7 @@ interface Test {
   is_published: boolean;
 }
 
-type QuestionType = 'single_choice' | 'multiple_choice' | 'text_input' | 'matching' | 'drag_drop' | 'select_list' | 'ordering' | 'code';
+type QuestionType = 'single_choice' | 'multiple_choice' | 'text_input' | 'matching' | 'drag_drop' | 'select_list' | 'ordering' | 'code' | 'number_pairs';
 
 const QUESTION_TYPE_LABELS: Record<string, string> = {
   single_choice: 'Одиночный выбор',
@@ -52,9 +53,10 @@ const QUESTION_TYPE_LABELS: Record<string, string> = {
   select_list: 'Выбор из списка',
   ordering: 'Упорядочивание',
   code: 'Код (программирование)',
+  number_pairs: 'Пары чисел',
 };
 
-const QUESTION_TYPES: QuestionType[] = ['single_choice', 'multiple_choice', 'text_input', 'matching', 'drag_drop', 'select_list', 'ordering', 'code'];
+const QUESTION_TYPES: QuestionType[] = ['single_choice', 'multiple_choice', 'text_input', 'matching', 'drag_drop', 'select_list', 'ordering', 'code', 'number_pairs'];
 
 /* ─── Question Constructor ──────────────────────────────────── */
 
@@ -90,6 +92,10 @@ interface QuestionFormData {
   codeLanguage: string;
   codeStarterCode: string;
   codeTestCases: { input: string; expected_output: string }[];
+  // number_pairs
+  pairs: [string, string][];
+  pairsOrderedPairs: boolean;
+  pairsOrderedWithin: boolean;
 }
 
 function emptyFormData(type: QuestionType): QuestionFormData {
@@ -117,6 +123,9 @@ function emptyFormData(type: QuestionType): QuestionFormData {
     codeLanguage: 'python',
     codeStarterCode: '',
     codeTestCases: [{ input: '', expected_output: '' }],
+    pairs: [['', ''], ['', '']],
+    pairsOrderedPairs: false,
+    pairsOrderedWithin: true,
   };
 }
 
@@ -180,6 +189,17 @@ function formDataFromQuestion(q: Question): QuestionFormData {
       fd.codeStarterCode = (content.starter_code as string) || '';
       const ca = q.correct_answer as { test_cases?: { input: string; expected_output: string }[] } | undefined;
       fd.codeTestCases = ca?.test_cases || [{ input: '', expected_output: '' }];
+      break;
+    }
+    case 'number_pairs': {
+      const ca = q.correct_answer as { pairs?: unknown[]; ordered_pairs?: boolean; ordered_within?: boolean } | undefined;
+      const rawPairs = Array.isArray(ca?.pairs) ? ca!.pairs : [['', ''], ['', '']];
+      fd.pairs = rawPairs.map((p) =>
+        Array.isArray(p) ? [p[0] != null ? String(p[0]) : '', p[1] != null ? String(p[1]) : ''] : ['', ''],
+      ) as [string, string][];
+      if (fd.pairs.length === 0) fd.pairs = [['', ''], ['', '']];
+      fd.pairsOrderedPairs = !!ca?.ordered_pairs;
+      fd.pairsOrderedWithin = ca?.ordered_within !== false;
       break;
     }
   }
@@ -258,6 +278,24 @@ function buildPayload(fd: QuestionFormData): { question_type: string; content: R
         },
         correct_answer: { test_cases: fd.codeTestCases },
       };
+    case 'number_pairs': {
+      const toNum = (s: string) => {
+        const v = parseFloat(s.trim().replace(',', '.'));
+        return Number.isNaN(v) ? null : v;
+      };
+      const cleanPairs = fd.pairs
+        .map((p) => [toNum(p[0]), toNum(p[1])])
+        .filter((p) => p[0] !== null && p[1] !== null) as number[][];
+      return {
+        ...base,
+        content: { text: fd.text, num_pairs: cleanPairs.length, ...img },
+        correct_answer: {
+          pairs: cleanPairs,
+          ordered_pairs: fd.pairsOrderedPairs,
+          ordered_within: fd.pairsOrderedWithin,
+        },
+      };
+    }
   }
 }
 
@@ -279,6 +317,7 @@ function QuestionPreview({ fd }: { fd: QuestionFormData }) {
       {fd.question_type === 'select_list' && <SelectFromList {...previewProps} />}
       {fd.question_type === 'ordering' && <Ordering {...previewProps} />}
       {fd.question_type === 'code' && <CodeEditor {...previewProps} />}
+      {fd.question_type === 'number_pairs' && <NumberPairs {...previewProps} />}
     </div>
   );
 }
@@ -935,6 +974,71 @@ function QuestionConstructor({
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        );
+
+      case 'number_pairs':
+        return (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+              <span className="label">Пары чисел (правильный ответ)</span>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => update({ pairs: [...fd.pairs, ['', '']] })}>+ Добавить пару</button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {fd.pairs.map((pair, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ width: '1.5rem', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>{i + 1}</span>
+                  <input
+                    type="text"
+                    className="input"
+                    value={pair[0]}
+                    onChange={(e) => {
+                      const next = fd.pairs.map((p) => [...p] as [string, string]);
+                      next[i][0] = e.target.value;
+                      update({ pairs: next });
+                    }}
+                    placeholder="Число"
+                    style={{ width: '6rem', textAlign: 'center' }}
+                  />
+                  <span style={{ color: 'var(--color-text-muted)', fontWeight: 700 }}>;</span>
+                  <input
+                    type="text"
+                    className="input"
+                    value={pair[1]}
+                    onChange={(e) => {
+                      const next = fd.pairs.map((p) => [...p] as [string, string]);
+                      next[i][1] = e.target.value;
+                      update({ pairs: next });
+                    }}
+                    placeholder="Число"
+                    style={{ width: '6rem', textAlign: 'center' }}
+                  />
+                  {fd.pairs.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => update({ pairs: fd.pairs.filter((_, j) => j !== i) })}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-danger)', fontSize: '1.125rem', padding: '0.25rem', lineHeight: 1 }}
+                      title="Удалить пару"
+                    >
+                      &times;
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            <p className="t-caption" style={{ marginTop: '0.375rem' }}>
+              Допускаются целые и десятичные числа. Ученик увидит столько полей для пар, сколько здесь заполнено.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.75rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.875rem' }}>
+                <input type="checkbox" checked={fd.pairsOrderedPairs} onChange={(e) => update({ pairsOrderedPairs: e.target.checked })} />
+                Учитывать порядок пар
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.875rem' }}>
+                <input type="checkbox" checked={fd.pairsOrderedWithin} onChange={(e) => update({ pairsOrderedWithin: e.target.checked })} />
+                Учитывать порядок чисел внутри пары
+              </label>
             </div>
           </div>
         );

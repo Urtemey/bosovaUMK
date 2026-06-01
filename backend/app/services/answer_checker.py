@@ -20,6 +20,7 @@ def check_answer(question_type, student_answer, correct_answer):
         QuestionType.SELECT_LIST: _check_select_list,
         QuestionType.ORDERING: _check_ordering,
         QuestionType.CODE: _check_code,
+        QuestionType.NUMBER_PAIRS: _check_number_pairs,
     }
 
     checker = checkers.get(question_type)
@@ -104,3 +105,66 @@ def _check_code(student, correct):
             return False
 
     return True
+
+
+def _to_number(value):
+    """Parse a value into a float, accepting comma as decimal separator.
+
+    Returns None if the value can't be parsed (treated as wrong/empty).
+    """
+    if value is None:
+        return None
+    try:
+        return float(str(value).strip().replace(',', '.'))
+    except (ValueError, TypeError):
+        return None
+
+
+def _check_number_pairs(student, correct):
+    """Check a number-pairs answer.
+
+    Correct answer format:
+        {
+          "pairs": [[a, b], [c, d], ...],
+          "ordered_pairs": bool,    # does the order of the pairs matter?
+          "ordered_within": bool,   # does the order within each pair matter?
+        }
+    Student answer format: [[a, b], [c, d], ...]
+
+    Numbers are compared by value (1 == 01 == 1.0, comma allowed as separator).
+    """
+    if not isinstance(correct, dict):
+        return False
+
+    pairs = correct.get('pairs')
+    if not isinstance(pairs, list) or not pairs:
+        return False
+
+    ordered_pairs = bool(correct.get('ordered_pairs', False))
+    ordered_within = bool(correct.get('ordered_within', True))
+
+    if not isinstance(student, list):
+        return False
+
+    def norm_pair(pair):
+        if not isinstance(pair, (list, tuple)) or len(pair) != 2:
+            return None
+        a, b = _to_number(pair[0]), _to_number(pair[1])
+        if a is None or b is None:
+            return None
+        return (a, b) if ordered_within else tuple(sorted((a, b)))
+
+    correct_norm = [norm_pair(p) for p in pairs]
+    student_norm = [norm_pair(p) for p in student]
+
+    # Teacher data is assumed valid; a malformed/empty student pair => wrong.
+    if any(p is None for p in correct_norm):
+        return False
+    if any(p is None for p in student_norm):
+        return False
+    if len(correct_norm) != len(student_norm):
+        return False
+
+    if ordered_pairs:
+        return correct_norm == student_norm
+    return sorted(correct_norm) == sorted(student_norm)

@@ -12,6 +12,7 @@ import DragDrop from '@/components/questions/DragDrop';
 import SelectFromList from '@/components/questions/SelectFromList';
 import Ordering from '@/components/questions/Ordering';
 import CodeEditor from '@/components/questions/CodeEditor';
+import NumberPairs from '@/components/questions/NumberPairs';
 import PythonPanel from '@/components/ui/PythonPanel';
 
 interface Question {
@@ -453,6 +454,7 @@ export default function AttemptPage() {
       case 'select_list':     return <SelectFromList {...props} />;
       case 'ordering':        return <Ordering {...props} />;
       case 'code':            return <CodeEditor {...props} />;
+      case 'number_pairs':    return <NumberPairs {...props} />;
       default:
         return <p className="t-body">Неизвестный тип вопроса</p>;
     }

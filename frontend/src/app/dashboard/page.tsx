@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { testsApi } from '@/lib/api';
 import { useRouter } from 'next/navigation';
+import SplitTestModal from '@/components/tests/SplitTestModal';
 
 interface Test {
   id: number;
@@ -14,6 +15,8 @@ interface Test {
   question_count: number;
   is_published: boolean;
 }
+
+const GRADES = [5, 6, 7, 8, 9, 10, 11];
 
 const GRADE_BG: Record<number, string> = {
   5: '#edf2f9',
@@ -45,27 +48,32 @@ function DashboardTestCard({
   test,
   index,
   onDelete,
+  onSplit,
+  onMove,
   deleting,
+  moving,
 }: {
   test: Test;
   index: number;
   onDelete: (test: Test) => void;
+  onSplit: (test: Test) => void;
+  onMove: (test: Test) => void;
   deleting: boolean;
+  moving: boolean;
 }) {
   const bg = GRADE_BG[test.grade] ?? '#f0fdfa';
   const color = GRADE_COLOR[test.grade] ?? '#2b4c7e';
 
-  const handleDelete = (e: React.MouseEvent) => {
+  const stop = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    onDelete(test);
   };
 
   return (
     <Link
       href={`/test/${test.id}`}
       className="test-card animate-fade-up"
-      style={{ animationDelay: `${0.04 * Math.min(index, 10)}s`, opacity: deleting ? 0.5 : 1 }}
+      style={{ animationDelay: `${0.04 * Math.min(index, 10)}s`, opacity: deleting || moving ? 0.5 : 1 }}
     >
       <div className="test-card-top" style={{ background: bg }}>
         <span
@@ -88,21 +96,59 @@ function DashboardTestCard({
           <rect x="4" y="3" width="16" height="18" rx="2" />
           <path d="M8 7h8M8 11h8M8 15h5" />
         </svg>
-        <button
-          type="button"
-          onClick={handleDelete}
-          disabled={deleting}
-          aria-label={`Удалить тест «${test.title}»`}
-          title="Удалить тест"
-          className="test-card-delete-btn"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 6h18" />
-            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-            <path d="M10 11v6M14 11v6" />
-          </svg>
-        </button>
+
+        <div style={{ position: 'absolute', top: '0.625rem', right: '0.625rem', display: 'flex', gap: '0.25rem' }}>
+          {/* Перенести в класс */}
+          <button
+            type="button"
+            onClick={(e) => { stop(e); onMove(test); }}
+            disabled={moving}
+            aria-label="Перенести в другой класс"
+            title="Перенести в другой класс"
+            className="test-card-action-btn"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 9l-3 3 3 3" />
+              <path d="M2 12h12" />
+              <path d="M19 15l3-3-3-3" />
+              <path d="M22 12H10" />
+            </svg>
+          </button>
+
+          {/* Разделить тест */}
+          <button
+            type="button"
+            onClick={(e) => { stop(e); onSplit(test); }}
+            aria-label={`Разделить тест «${test.title}»`}
+            title="Разделить тест"
+            className="test-card-action-btn"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="6" cy="6" r="3" />
+              <circle cx="6" cy="18" r="3" />
+              <path d="M20 4L8.12 15.88" />
+              <path d="M14.47 14.48L20 20" />
+              <path d="M8.12 8.12L12 12" />
+            </svg>
+          </button>
+
+          {/* Удалить */}
+          <button
+            type="button"
+            onClick={(e) => { stop(e); onDelete(test); }}
+            disabled={deleting}
+            aria-label={`Удалить тест «${test.title}»`}
+            title="Удалить тест"
+            className="test-card-action-btn test-card-action-btn-danger"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 6h18" />
+              <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+              <path d="M10 11v6M14 11v6" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       <div className="test-card-body">
@@ -171,6 +217,34 @@ export default function DashboardPage() {
   const [tests, setTests] = useState<Test[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [movingId, setMovingId] = useState<number | null>(null);
+  const [splitTest, setSplitTest] = useState<Test | null>(null);
+  const [moveTest, setMoveTest] = useState<Test | null>(null);
+
+  const handleMoveTest = async (test: Test, grade: number) => {
+    if (!token || movingId !== null) return;
+    setMoveTest(null);
+    setMovingId(test.id);
+    try {
+      await testsApi.update(token, test.id, { grade });
+      setTests((prev) => prev.map((t) => (t.id === test.id ? { ...t, grade } : t)));
+    } catch (e) {
+      console.error(e);
+      window.alert('Не удалось перенести тест.');
+    } finally {
+      setMovingId(null);
+    }
+  };
+
+  const reloadTests = async () => {
+    if (!token) return;
+    try {
+      const data = (await testsApi.my(token)) as Test[];
+      setTests(data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const handleDeleteTest = async (test: Test) => {
     if (!token) return;
@@ -350,7 +424,10 @@ export default function DashboardPage() {
                           test={test}
                           index={cardIndex++}
                           onDelete={handleDeleteTest}
+                          onSplit={setSplitTest}
+                          onMove={setMoveTest}
                           deleting={deletingId === test.id}
+                          moving={movingId === test.id}
                         />
                       ))}
                     </div>
@@ -360,6 +437,58 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {splitTest && token && (
+        <SplitTestModal
+          test={splitTest}
+          token={token}
+          onClose={() => setSplitTest(null)}
+          onDone={(createdCount) => {
+            setSplitTest(null);
+            reloadTests();
+            window.alert(
+              `Создано тестов: ${createdCount}. Исходный тест переведён в черновик.`,
+            );
+          }}
+        />
+      )}
+
+      {moveTest && (
+        <div
+          onClick={() => setMoveTest(null)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(20,24,30,0.45)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="card-lg"
+            style={{ width: '100%', maxWidth: '24rem', padding: '1.5rem', background: 'var(--color-surface)' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', marginBottom: '1rem' }}>
+              <div>
+                <h2 className="t-subtitle" style={{ marginBottom: '0.25rem' }}>Перенести в класс</h2>
+                <p className="t-caption">«{moveTest.title}» · сейчас {moveTest.grade} класс</p>
+              </div>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setMoveTest(null)} aria-label="Закрыть">&times;</button>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+              {GRADES.filter((g) => g !== moveTest.grade).map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => handleMoveTest(moveTest, g)}
+                  style={{ minWidth: '5rem', flex: '1 0 auto' }}
+                >
+                  {g} класс
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

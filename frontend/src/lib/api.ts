@@ -72,6 +72,12 @@ export const testsApi = {
     apiFetch(`/tests/${id}`, { method: 'DELETE', token }),
   duplicate: (token: string, id: number) =>
     apiFetch(`/tests/${id}/duplicate`, { method: 'POST', token }),
+  split: (
+    token: string,
+    id: number,
+    data: { segments: { title: string; start: number; end: number }[] },
+  ) =>
+    apiFetch(`/tests/${id}/split`, { method: 'POST', body: JSON.stringify(data), token }),
   reorder: (token: string, grade: number, order: number[]) =>
     apiFetch('/tests/reorder', { method: 'POST', body: JSON.stringify({ grade, order }), token }),
   addQuestion: (token: string, testId: number, data: Record<string, unknown>) =>
