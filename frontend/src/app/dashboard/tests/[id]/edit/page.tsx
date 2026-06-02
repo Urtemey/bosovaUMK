@@ -15,6 +15,7 @@ import SelectFromList from '@/components/questions/SelectFromList';
 import Ordering from '@/components/questions/Ordering';
 import CodeEditor from '@/components/questions/CodeEditor';
 import NumberPairs from '@/components/questions/NumberPairs';
+import FreeForm from '@/components/questions/FreeForm';
 import ImageUpload from '@/components/ui/ImageUpload';
 
 const RichTextEditor = dynamic(() => import('@/components/editor/RichTextEditor'), { ssr: false });
@@ -42,7 +43,7 @@ interface Test {
   is_published: boolean;
 }
 
-type QuestionType = 'single_choice' | 'multiple_choice' | 'text_input' | 'matching' | 'drag_drop' | 'select_list' | 'ordering' | 'code' | 'number_pairs';
+type QuestionType = 'single_choice' | 'multiple_choice' | 'text_input' | 'matching' | 'drag_drop' | 'select_list' | 'ordering' | 'code' | 'number_pairs' | 'free_form';
 
 const QUESTION_TYPE_LABELS: Record<string, string> = {
   single_choice: 'Одиночный выбор',
@@ -54,9 +55,58 @@ const QUESTION_TYPE_LABELS: Record<string, string> = {
   ordering: 'Упорядочивание',
   code: 'Код (программирование)',
   number_pairs: 'Пары чисел',
+  free_form: 'Свободный формат',
 };
 
-const QUESTION_TYPES: QuestionType[] = ['single_choice', 'multiple_choice', 'text_input', 'matching', 'drag_drop', 'select_list', 'ordering', 'code', 'number_pairs'];
+const QUESTION_TYPES: QuestionType[] = ['single_choice', 'multiple_choice', 'text_input', 'matching', 'drag_drop', 'select_list', 'ordering', 'code', 'number_pairs', 'free_form'];
+
+/* ─── Free-form blocks (editor side) ────────────────────────── */
+
+type FreeFieldType = 'single_choice' | 'multiple_choice' | 'text' | 'number';
+
+interface FreeHtmlBlock {
+  type: 'html';
+  id: string;        // editor-only, for stable React keys; not serialized
+  html: string;
+}
+interface FreeFieldBlock {
+  type: 'field';
+  id: string;
+  fieldType: FreeFieldType;
+  prompt: string;
+  options: string[];
+  correctSingle: number;
+  correctMultiple: boolean[];
+  acceptedAnswers: string[];
+}
+type FreeBlock = FreeHtmlBlock | FreeFieldBlock;
+
+const FREE_FIELD_LABELS: Record<FreeFieldType, string> = {
+  single_choice: 'Одиночный выбор',
+  multiple_choice: 'Множественный выбор',
+  text: 'Текстовый ответ',
+  number: 'Число',
+};
+
+function makeFieldId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `f_${crypto.randomUUID().slice(0, 8)}`;
+  }
+  return `f_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function newFreeFieldBlock(fieldType: FreeFieldType): FreeFieldBlock {
+  return {
+    type: 'field',
+    id: makeFieldId(),
+    fieldType,
+    prompt: '',
+    options: fieldType === 'single_choice' || fieldType === 'multiple_choice' ? ['', ''] : [],
+    correctSingle: 0,
+    correctMultiple: [false, false],
+    acceptedAnswers: [''],
+  };
+}
 
 /* ─── Question Constructor ──────────────────────────────────── */
 
@@ -96,6 +146,8 @@ interface QuestionFormData {
   pairs: [string, string][];
   pairsOrderedPairs: boolean;
   pairsOrderedWithin: boolean;
+  // free_form
+  freeBlocks: FreeBlock[];
 }
 
 function emptyFormData(type: QuestionType): QuestionFormData {
@@ -126,6 +178,7 @@ function emptyFormData(type: QuestionType): QuestionFormData {
     pairs: [['', ''], ['', '']],
     pairsOrderedPairs: false,
     pairsOrderedWithin: true,
+    freeBlocks: [],
   };
 }
 
@@ -200,6 +253,40 @@ function formDataFromQuestion(q: Question): QuestionFormData {
       if (fd.pairs.length === 0) fd.pairs = [['', ''], ['', '']];
       fd.pairsOrderedPairs = !!ca?.ordered_pairs;
       fd.pairsOrderedWithin = ca?.ordered_within !== false;
+      break;
+    }
+    case 'free_form': {
+      const rawBlocks = Array.isArray(content.blocks) ? (content.blocks as Record<string, unknown>[]) : [];
+      const correct = (q.correct_answer && typeof q.correct_answer === 'object' ? q.correct_answer : {}) as Record<string, { type?: string; value?: unknown }>;
+      fd.freeBlocks = rawBlocks.map((b): FreeBlock => {
+        if (b.type === 'field') {
+          const id = String(b.id);
+          const fieldType = (b.field_type as FreeFieldType) || 'text';
+          const options = Array.isArray(b.options) ? (b.options as string[]) : [];
+          const spec = correct[id];
+          const block: FreeFieldBlock = {
+            type: 'field',
+            id,
+            fieldType,
+            prompt: (b.prompt as string) || '',
+            options: options.length ? options : (fieldType === 'single_choice' || fieldType === 'multiple_choice' ? ['', ''] : []),
+            correctSingle: typeof spec?.value === 'number' ? (spec.value as number) : 0,
+            correctMultiple: [],
+            acceptedAnswers: [''],
+          };
+          if (fieldType === 'multiple_choice') {
+            const vals = Array.isArray(spec?.value) ? (spec!.value as number[]) : [];
+            block.correctMultiple = block.options.map((_, i) => vals.includes(i));
+          } else if (fieldType === 'text' || fieldType === 'number') {
+            const vals = Array.isArray(spec?.value) ? (spec!.value as unknown[]).map(String) : [];
+            block.acceptedAnswers = vals.length ? vals : [''];
+          } else {
+            block.correctMultiple = block.options.map(() => false);
+          }
+          return block;
+        }
+        return { type: 'html', id: makeFieldId(), html: (b.html as string) || '' };
+      });
       break;
     }
   }
@@ -296,6 +383,45 @@ function buildPayload(fd: QuestionFormData): { question_type: string; content: R
         },
       };
     }
+    case 'free_form': {
+      const blocks: Record<string, unknown>[] = [];
+      const correct: Record<string, { type: string; value: unknown }> = {};
+      fd.freeBlocks.forEach((b) => {
+        if (b.type === 'html') {
+          blocks.push({ type: 'html', html: b.html });
+          return;
+        }
+        const fieldBlock: Record<string, unknown> = {
+          type: 'field',
+          id: b.id,
+          field_type: b.fieldType,
+          prompt: b.prompt,
+        };
+        if (b.fieldType === 'single_choice' || b.fieldType === 'multiple_choice') {
+          fieldBlock.options = b.options;
+        }
+        blocks.push(fieldBlock);
+
+        if (b.fieldType === 'single_choice') {
+          correct[b.id] = { type: 'single_choice', value: b.correctSingle };
+        } else if (b.fieldType === 'multiple_choice') {
+          correct[b.id] = {
+            type: 'multiple_choice',
+            value: b.correctMultiple.reduce<number[]>((acc, checked, i) => {
+              if (checked) acc.push(i);
+              return acc;
+            }, []),
+          };
+        } else {
+          correct[b.id] = { type: b.fieldType, value: b.acceptedAnswers.filter((a) => a.trim()) };
+        }
+      });
+      return {
+        ...base,
+        content: { text: fd.text, blocks, ...img },
+        correct_answer: correct,
+      };
+    }
   }
 }
 
@@ -318,6 +444,7 @@ function QuestionPreview({ fd }: { fd: QuestionFormData }) {
       {fd.question_type === 'ordering' && <Ordering {...previewProps} />}
       {fd.question_type === 'code' && <CodeEditor {...previewProps} />}
       {fd.question_type === 'number_pairs' && <NumberPairs {...previewProps} />}
+      {fd.question_type === 'free_form' && <FreeForm {...previewProps} />}
     </div>
   );
 }
@@ -478,6 +605,35 @@ function QuestionConstructor({
     update({ selectOptions: newOpts, selectCorrect: newCorrect });
   }
   function setSelectOption(i: number, val: string) { const arr = [...fd.selectOptions]; arr[i] = val; update({ selectOptions: arr }); }
+
+  /* ── Free-form block helpers ───────────────────────────────── */
+
+  function addFreeBlock(block: FreeBlock) { update({ freeBlocks: [...fd.freeBlocks, block] }); }
+  function removeFreeBlock(i: number) { update({ freeBlocks: fd.freeBlocks.filter((_, idx) => idx !== i) }); }
+  function moveFreeBlock(i: number, dir: -1 | 1) {
+    const j = i + dir;
+    if (j < 0 || j >= fd.freeBlocks.length) return;
+    const arr = [...fd.freeBlocks];
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+    update({ freeBlocks: arr });
+  }
+  function patchFreeBlock(i: number, patch: Partial<FreeFieldBlock> | Partial<FreeHtmlBlock>) {
+    const arr = fd.freeBlocks.map((b, idx) => (idx === i ? { ...b, ...patch } as FreeBlock : b));
+    update({ freeBlocks: arr });
+  }
+  function addFreeFieldOption(i: number) {
+    const b = fd.freeBlocks[i];
+    if (b.type !== 'field') return;
+    patchFreeBlock(i, { options: [...b.options, ''], correctMultiple: [...b.correctMultiple, false] });
+  }
+  function removeFreeFieldOption(i: number, optIdx: number) {
+    const b = fd.freeBlocks[i];
+    if (b.type !== 'field' || b.options.length <= 2) return;
+    const options = b.options.filter((_, idx) => idx !== optIdx);
+    const correctMultiple = b.correctMultiple.filter((_, idx) => idx !== optIdx);
+    const correctSingle = b.correctSingle >= options.length ? 0 : (b.correctSingle > optIdx ? b.correctSingle - 1 : b.correctSingle);
+    patchFreeBlock(i, { options, correctMultiple, correctSingle });
+  }
 
   /* ── Render type-specific fields ───────────────────────────── */
 
@@ -1042,6 +1198,180 @@ function QuestionConstructor({
             </div>
           </div>
         );
+
+      case 'free_form':
+        return (
+          <div>
+            <span className="label">Блоки вопроса</span>
+            <p className="t-caption" style={{ marginBottom: '0.75rem' }}>
+              Свободно чередуйте текстовые блоки и поля для ответа. Поля можно перемещать вверх/вниз.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {fd.freeBlocks.map((block, i) => (
+                <div
+                  key={block.id}
+                  style={{ padding: '0.75rem', border: '1px solid var(--color-border)', borderRadius: 8, background: 'var(--color-surface-2)' }}
+                >
+                  {/* Block header */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem', gap: '0.5rem' }}>
+                    <span className="t-caption" style={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      {block.type === 'html' ? 'Текст' : FREE_FIELD_LABELS[block.fieldType]}
+                    </span>
+                    <div style={{ display: 'flex', gap: '0.25rem' }}>
+                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => moveFreeBlock(i, -1)} disabled={i === 0} title="Вверх">↑</button>
+                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => moveFreeBlock(i, 1)} disabled={i === fd.freeBlocks.length - 1} title="Вниз">↓</button>
+                      <button
+                        type="button"
+                        onClick={() => removeFreeBlock(i)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-danger)', fontSize: '1.125rem', padding: '0.25rem', lineHeight: 1 }}
+                        title="Удалить блок"
+                      >
+                        &times;
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* HTML block */}
+                  {block.type === 'html' && (
+                    <RichTextEditor
+                      value={block.html}
+                      onChange={(html) => patchFreeBlock(i, { html })}
+                      placeholder="Текст, изображение, формула..."
+                      token={token ?? undefined}
+                    />
+                  )}
+
+                  {/* Field block */}
+                  {block.type === 'field' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <input
+                        type="text"
+                        className="input"
+                        value={block.prompt}
+                        onChange={(e) => patchFreeBlock(i, { prompt: e.target.value })}
+                        placeholder="Вопрос / подпись к полю (необязательно)"
+                      />
+
+                      {(block.fieldType === 'single_choice' || block.fieldType === 'multiple_choice') && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+                          {block.options.map((opt, oi) => (
+                            <div key={oi} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              {block.fieldType === 'single_choice' ? (
+                                <input
+                                  type="radio"
+                                  name={`free-correct-${block.id}`}
+                                  checked={block.correctSingle === oi}
+                                  onChange={() => patchFreeBlock(i, { correctSingle: oi })}
+                                  title="Правильный ответ"
+                                />
+                              ) : (
+                                <input
+                                  type="checkbox"
+                                  checked={block.correctMultiple[oi] || false}
+                                  onChange={(e) => {
+                                    const cm = [...block.correctMultiple];
+                                    cm[oi] = e.target.checked;
+                                    patchFreeBlock(i, { correctMultiple: cm });
+                                  }}
+                                  title="Правильный ответ"
+                                />
+                              )}
+                              <input
+                                type="text"
+                                className="input"
+                                value={opt}
+                                onChange={(e) => {
+                                  const options = [...block.options];
+                                  options[oi] = e.target.value;
+                                  patchFreeBlock(i, { options });
+                                }}
+                                placeholder={`Вариант ${oi + 1}`}
+                                style={{ flex: 1 }}
+                              />
+                              {block.options.length > 2 && (
+                                <button
+                                  type="button"
+                                  onClick={() => removeFreeFieldOption(i, oi)}
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-danger)', fontSize: '1.125rem', padding: '0.25rem', lineHeight: 1 }}
+                                  title="Удалить вариант"
+                                >
+                                  &times;
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                          <button type="button" className="btn btn-ghost btn-sm" onClick={() => addFreeFieldOption(i)} style={{ alignSelf: 'flex-start' }}>
+                            + Вариант
+                          </button>
+                        </div>
+                      )}
+
+                      {(block.fieldType === 'text' || block.fieldType === 'number') && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+                          <span className="t-caption">Принимаемые ответы</span>
+                          {block.acceptedAnswers.map((ans, ai) => (
+                            <div key={ai} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <input
+                                type="text"
+                                className="input"
+                                value={ans}
+                                onChange={(e) => {
+                                  const arr = [...block.acceptedAnswers];
+                                  arr[ai] = e.target.value;
+                                  patchFreeBlock(i, { acceptedAnswers: arr });
+                                }}
+                                placeholder={block.fieldType === 'number' ? 'Например: 20' : `Ответ ${ai + 1}`}
+                                style={{ flex: 1 }}
+                              />
+                              {block.acceptedAnswers.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => patchFreeBlock(i, { acceptedAnswers: block.acceptedAnswers.filter((_, idx) => idx !== ai) })}
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-danger)', fontSize: '1.125rem', padding: '0.25rem', lineHeight: 1 }}
+                                  title="Удалить"
+                                >
+                                  &times;
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                          <button type="button" className="btn btn-ghost btn-sm" onClick={() => patchFreeBlock(i, { acceptedAnswers: [...block.acceptedAnswers, ''] })} style={{ alignSelf: 'flex-start' }}>
+                            + Ответ
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Add-block toolbar */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem', marginTop: '0.75rem' }}>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => addFreeBlock({ type: 'html', id: makeFieldId(), html: '' })}>
+                + Текст
+              </button>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => addFreeBlock(newFreeFieldBlock('single_choice'))}>
+                + Одиночный выбор
+              </button>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => addFreeBlock(newFreeFieldBlock('multiple_choice'))}>
+                + Множественный выбор
+              </button>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => addFreeBlock(newFreeFieldBlock('text'))}>
+                + Текстовое поле
+              </button>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => addFreeBlock(newFreeFieldBlock('number'))}>
+                + Число
+              </button>
+            </div>
+            {fd.freeBlocks.length === 0 && (
+              <p className="t-caption" style={{ marginTop: '0.5rem', color: 'var(--color-text-muted)' }}>
+                Добавьте хотя бы один блок с полем для ответа.
+              </p>
+            )}
+          </div>
+        );
     }
   }
 
@@ -1120,7 +1450,7 @@ function QuestionConstructor({
             type="button"
             className="btn btn-primary btn-sm"
             onClick={() => onSave(fd)}
-            disabled={saving || !fd.text.trim()}
+            disabled={saving || !fd.text.trim() || (fd.question_type === 'free_form' && !fd.freeBlocks.some(b => b.type === 'field'))}
           >
             {saving ? (
               <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>

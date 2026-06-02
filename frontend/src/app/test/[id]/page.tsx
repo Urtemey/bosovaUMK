@@ -37,6 +37,7 @@ const QUESTION_TYPE_LABELS: Record<string, string> = {
   ordering: 'Упорядочивание',
   code: 'Программирование',
   number_pairs: 'Пары чисел',
+  free_form: 'Свободный формат',
 };
 
 function pluralQuestions(n: number) {

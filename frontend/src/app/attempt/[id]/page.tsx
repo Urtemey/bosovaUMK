@@ -13,6 +13,7 @@ import SelectFromList from '@/components/questions/SelectFromList';
 import Ordering from '@/components/questions/Ordering';
 import CodeEditor from '@/components/questions/CodeEditor';
 import NumberPairs from '@/components/questions/NumberPairs';
+import FreeForm from '@/components/questions/FreeForm';
 import PythonPanel from '@/components/ui/PythonPanel';
 
 interface Question {
@@ -455,6 +456,7 @@ export default function AttemptPage() {
       case 'ordering':        return <Ordering {...props} />;
       case 'code':            return <CodeEditor {...props} />;
       case 'number_pairs':    return <NumberPairs {...props} />;
+      case 'free_form':       return <FreeForm {...props} />;
       default:
         return <p className="t-body">Неизвестный тип вопроса</p>;
     }

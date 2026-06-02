@@ -36,6 +36,10 @@ const QUESTION_TYPE_LABELS: Record<string, string> = {
   matching: 'Соответствие',
   drag_drop: 'Перетаскивание',
   select_list: 'Выбор из списка',
+  ordering: 'Упорядочивание',
+  code: 'Программирование',
+  number_pairs: 'Пары чисел',
+  free_form: 'Свободный формат',
 };
 
 function pluralQuestions(n: number) {

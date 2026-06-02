@@ -21,6 +21,7 @@ def check_answer(question_type, student_answer, correct_answer):
         QuestionType.ORDERING: _check_ordering,
         QuestionType.CODE: _check_code,
         QuestionType.NUMBER_PAIRS: _check_number_pairs,
+        QuestionType.FREE_FORM: _check_free_form,
     }
 
     checker = checkers.get(question_type)
@@ -168,3 +169,63 @@ def _check_number_pairs(student, correct):
     if ordered_pairs:
         return correct_norm == student_norm
     return sorted(correct_norm) == sorted(student_norm)
+
+
+def _check_number(student, correct):
+    """Single numeric field. ``correct`` is a list of accepted values (or a scalar).
+
+    Compared by numeric value (comma allowed as separator). Any match passes.
+    """
+    s = _to_number(student)
+    if s is None:
+        return False
+    accepted = correct if isinstance(correct, list) else [correct]
+    for c in accepted:
+        cn = _to_number(c)
+        if cn is not None and cn == s:
+            return True
+    return False
+
+
+def _check_free_form(student, correct):
+    """Free-form question: a set of inline answer fields, each with its own type.
+
+    Correct answer format (self-describing — the checker has no access to content):
+        {
+          "<field_id>": {"type": "single_choice", "value": 0},
+          "<field_id>": {"type": "multiple_choice", "value": [0, 2]},
+          "<field_id>": {"type": "text", "value": ["ответ", "вариант"]},
+          "<field_id>": {"type": "number", "value": ["20"]},
+          ...
+        }
+    Student answer format: {"<field_id>": <answer>, ...}
+
+    All-or-nothing: every field must be correct for the question to count as correct.
+    A missing/None student field => that field is wrong => whole question wrong.
+    """
+    if not isinstance(correct, dict) or not correct:
+        return False
+    if not isinstance(student, dict):
+        return False
+
+    field_checkers = {
+        'single_choice': _check_single_choice,
+        'multiple_choice': _check_multiple_choice,
+        'text': _check_text_input,
+        'text_input': _check_text_input,
+        'number': _check_number,
+    }
+
+    for field_id, spec in correct.items():
+        if not isinstance(spec, dict):
+            return False
+        checker = field_checkers.get(spec.get('type'))
+        if checker is None:
+            return False
+        student_value = student.get(field_id)
+        if student_value is None:
+            return False
+        if not checker(student_value, spec.get('value')):
+            return False
+
+    return True
