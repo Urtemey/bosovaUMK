@@ -94,6 +94,10 @@ function TBtn({ active, onClick, title, children, disabled }: {
   return (
     <button
       type="button"
+      // Keep the editor's (node) selection intact — without this, the
+      // button steals focus on mousedown and collapses the image selection,
+      // so updateAttributes('image', …) misses and resizing fails sporadically.
+      onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
       title={title}
       disabled={disabled}
