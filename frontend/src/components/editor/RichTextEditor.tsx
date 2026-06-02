@@ -59,6 +59,34 @@ const KatexInline = Node.create({
   },
 });
 
+/* ─── Image with size control ───────────────────────────────── */
+/* Extends the default Image node with a style-only `width` attribute
+   (always stored as "NNpx"). Defaults to null → existing content
+   serialises byte-identically, so old questions are untouched. */
+const ResizableImage = Image.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      width: {
+        default: null,
+        // read inline style only; legacy width="" attribute is ignored
+        parseHTML: (element: HTMLElement) => element.style.width || null,
+        renderHTML: (attributes: { width?: string | null }) => {
+          if (!attributes.width) return {};
+          return { style: `width: ${attributes.width}; vertical-align: middle;` };
+        },
+      },
+    };
+  },
+});
+
+const IMAGE_SIZES: { label: string; title: string; width: string | null }[] = [
+  { label: 'Иконка', title: 'Размер с букву (инлайн)', width: '24px' },
+  { label: 'Мал.', title: 'Маленькое', width: '120px' },
+  { label: 'Сред.', title: 'Среднее', width: '280px' },
+  { label: 'Полн.', title: 'Исходный размер', width: null },
+];
+
 /* ─── Toolbar button ─────────────────────────────────────────── */
 function TBtn({ active, onClick, title, children, disabled }: {
   active?: boolean; onClick: () => void; title: string; children: React.ReactNode; disabled?: boolean;
@@ -183,6 +211,19 @@ function Toolbar({ editor, uploadImage }: { editor: Editor; uploadImage?: (file:
           }}
         />
       )}
+      {editor.isActive('image') && (
+        <>
+          {IMAGE_SIZES.map((s) => (
+            <TBtn
+              key={s.label}
+              onClick={() => editor.chain().focus().updateAttributes('image', { width: s.width }).run()}
+              title={`Размер: ${s.title}`}
+            >
+              <span style={{ fontSize: 10, fontWeight: 700 }}>{s.label}</span>
+            </TBtn>
+          ))}
+        </>
+      )}
 
       <TBtn active={showFormula} onClick={() => setShowFormula(!showFormula)} title="Формула (LaTeX)">
         <span style={{ fontWeight: 700, fontSize: 13, fontFamily: 'serif' }}>∑</span>
@@ -266,7 +307,7 @@ export default function RichTextEditor({ value, onChange, placeholder, token }: 
       TableRow,
       TableCell,
       TableHeader,
-      Image.configure({ inline: true }),
+      ResizableImage.configure({ inline: true }),
       Placeholder.configure({ placeholder: placeholder || 'Введите текст...' }),
       KatexInline,
     ],
@@ -321,6 +362,7 @@ export default function RichTextEditor({ value, onChange, placeholder, token }: 
         }
         .tiptap th { background: var(--color-surface-2); font-weight: 600; }
         .tiptap img { max-width: 100%; border-radius: 6px; margin: 0.5em 0; }
+        .tiptap img[style*="width"] { vertical-align: middle; margin: 0 2px; }
         .tiptap ul, .tiptap ol { padding-left: 1.5em; margin: 0.25em 0; }
         .tiptap .katex { font-size: 1.05em; }
       `}</style>
