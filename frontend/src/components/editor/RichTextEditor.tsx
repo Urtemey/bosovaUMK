@@ -139,7 +139,8 @@ function Toolbar({ editor, uploadImage }: { editor: Editor; uploadImage?: (file:
       return;
     }
     const url = prompt('URL изображения:');
-    if (url) editor.chain().focus().setImage({ src: url }).run();
+    if (!url) return;
+    editor.chain().focus().insertContent({ type: 'image', attrs: { src: url, width: '280px' } }).run();
   };
 
   const insertTable = () => {
@@ -287,7 +288,13 @@ export default function RichTextEditor({ value, onChange, placeholder, token }: 
     if (!t) return;
     try {
       const { url } = await uploadsApi.image(t, file);
-      editorRef.current?.chain().focus().setImage({ src: url }).run();
+      const ed = editorRef.current;
+      if (!ed) return;
+      // Insert at a sensible default size (medium). Leave the cursor after the
+      // image (NOT a NodeSelection) so the next keystroke doesn't replace it.
+      // To change size the user clicks the image — selection now reliably reveals
+      // the size buttons (shouldRerenderOnTransaction fix above).
+      ed.chain().focus().insertContent({ type: 'image', attrs: { src: url, width: '280px' } }).run();
     } catch (e) {
       alert(e instanceof Error ? e.message : 'Не удалось загрузить изображение');
     }
@@ -317,6 +324,11 @@ export default function RichTextEditor({ value, onChange, placeholder, token }: 
     ],
     content: value,
     immediatelyRender: false,
+    // @tiptap/react v3 does NOT re-render on selection by default → the toolbar's
+    // isActive(...) checks (image-size buttons, bold/italic, table controls) go stale
+    // and the size buttons appear only intermittently. Re-render on every transaction
+    // so selecting an image reliably reveals its controls.
+    shouldRerenderOnTransaction: true,
     onUpdate: handleUpdate,
     editorProps: {
       attributes: {
@@ -365,8 +377,9 @@ export default function RichTextEditor({ value, onChange, placeholder, token }: 
           font-size: 0.875rem;
         }
         .tiptap th { background: var(--color-surface-2); font-weight: 600; }
-        .tiptap img { max-width: 100%; border-radius: 6px; margin: 0.5em 0; }
-        .tiptap img[style*="width"] { vertical-align: middle; margin: 0 2px; }
+        .tiptap img { max-width: 100%; border-radius: 6px; margin: 0.5em 0; cursor: pointer; }
+        .tiptap img[style*="width"] { display: inline; vertical-align: middle; margin: 0 3px; }
+        .tiptap img.ProseMirror-selectednode { outline: 2px solid var(--color-accent); outline-offset: 2px; }
         .tiptap ul, .tiptap ol { padding-left: 1.5em; margin: 0.25em 0; }
         .tiptap .katex { font-size: 1.05em; }
       `}</style>
