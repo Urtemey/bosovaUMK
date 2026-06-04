@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { testsApi } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
+import { htmlToPlainText } from '@/lib/text';
 import dynamic from 'next/dynamic';
 import SingleChoice from '@/components/questions/SingleChoice';
 import MultipleChoice from '@/components/questions/MultipleChoice';
@@ -1889,7 +1890,7 @@ export default function EditTestPage() {
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    {(q.content.text as string) || 'Вопрос'}
+                    {htmlToPlainText(q.content.text as string) || 'Вопрос'}
                   </p>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <span className="t-caption">{QUESTION_TYPE_LABELS[q.question_type] || q.question_type}</span>

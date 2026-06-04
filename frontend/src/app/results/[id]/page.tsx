@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { attemptsApi, testsApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { htmlToPlainText } from '@/lib/text';
 
 interface AnswerData {
   id: number;
@@ -333,7 +334,7 @@ export default function ResultsPage() {
                   </div>
                   <div>
                     <p style={{ fontSize: '0.9375rem', color: 'var(--color-text-primary)', lineHeight: 1.5 }}>
-                      {(q.content.text as string) || `Вопрос ${qIdx + 1}`}
+                      {htmlToPlainText(q.content.text as string) || `Вопрос ${qIdx + 1}`}
                     </p>
                     <p className="t-caption" style={{ marginTop: '0.25rem', color: 'var(--color-danger)' }}>
                       Ответ неверный

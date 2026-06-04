@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { testsApi, attemptsApi, assignmentsApi, classroomsApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/components/ui/Toast';
+import { htmlToPlainText } from '@/lib/text';
 import Link from 'next/link';
 
 interface Question {
@@ -742,7 +743,7 @@ export default function TestViewPage() {
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    {(q.content.text as string) || 'Вопрос'}
+                    {htmlToPlainText(q.content.text as string) || 'Вопрос'}
                   </p>
                   <span className="t-caption">{QUESTION_TYPE_LABELS[q.question_type] || q.question_type}</span>
                 </div>
