@@ -316,6 +316,11 @@ def update_question(test_id, question_id):
     question = Question.query.filter_by(id=question_id, test_id=test_id).first_or_404()
 
     data = request.get_json()
+    if 'question_type' in data:
+        question_type = data['question_type']
+        if question_type not in QuestionType.ALL:
+            return jsonify({'error': f'Тип вопроса должен быть одним из: {QuestionType.ALL}'}), 400
+        question.question_type = question_type
     if 'content' in data:
         question.content = data['content']
     if 'correct_answer' in data:
