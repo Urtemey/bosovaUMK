@@ -139,6 +139,20 @@ export const uploadsApi = {
     }
     return res.json();
   },
+  file: async (token: string, file: File): Promise<{ url: string; name: string }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${API_BASE}/uploads/file`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ error: 'Ошибка сервера' }));
+      throw new Error(error.error || `HTTP ${res.status}`);
+    }
+    return res.json();
+  },
 };
 
 // Assignments

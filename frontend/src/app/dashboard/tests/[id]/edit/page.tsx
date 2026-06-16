@@ -18,6 +18,7 @@ import CodeEditor from '@/components/questions/CodeEditor';
 import NumberPairs from '@/components/questions/NumberPairs';
 import FreeForm from '@/components/questions/FreeForm';
 import ImageUpload from '@/components/ui/ImageUpload';
+import FileUpload, { type FileAttachment } from '@/components/ui/FileUpload';
 
 const RichTextEditor = dynamic(() => import('@/components/editor/RichTextEditor'), { ssr: false });
 
@@ -117,6 +118,8 @@ interface QuestionFormData {
   points: number;
   // изображение к условию (любой тип)
   image: string;
+  // файл-вложение к условию (любой тип)
+  file: FileAttachment | null;
   // single_choice / multiple_choice
   options: string[];
   optionImages: string[];
@@ -157,6 +160,7 @@ function emptyFormData(type: QuestionType): QuestionFormData {
     text: '',
     points: 1,
     image: '',
+    file: null,
     options: ['', ''],
     optionImages: ['', ''],
     correctSingle: 0,
@@ -188,6 +192,7 @@ function formDataFromQuestion(q: Question): QuestionFormData {
   const fd = emptyFormData(q.question_type as QuestionType);
   fd.text = (content.text as string) || '';
   fd.image = (content.image as string) || '';
+  fd.file = (content.file as FileAttachment) || null;
   fd.points = q.points;
 
   switch (q.question_type) {
@@ -296,7 +301,10 @@ function formDataFromQuestion(q: Question): QuestionFormData {
 
 function buildPayload(fd: QuestionFormData): { question_type: string; content: Record<string, unknown>; correct_answer: unknown; points: number } {
   const base = { question_type: fd.question_type, points: fd.points };
-  const img = fd.image ? { image: fd.image } : {};
+  const img = {
+    ...(fd.image ? { image: fd.image } : {}),
+    ...(fd.file && fd.file.url ? { file: fd.file } : {}),
+  };
 
   switch (fd.question_type) {
     case 'single_choice':
@@ -476,6 +484,7 @@ function QuestionConstructor({
       text: prev.text,
       points: prev.points,
       image: prev.image,
+      file: prev.file,
     }));
   }
 
@@ -1410,6 +1419,16 @@ function QuestionConstructor({
           <ImageUpload
             value={fd.image}
             onChange={(url) => update({ image: url })}
+            token={token}
+          />
+        </div>
+
+        {/* Question file attachment */}
+        <div>
+          <label className="label">Файл к условию (необязательно)</label>
+          <FileUpload
+            value={fd.file}
+            onChange={(file) => update({ file })}
             token={token}
           />
         </div>

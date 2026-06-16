@@ -1,9 +1,10 @@
 'use client';
 
 import HtmlContent from '@/components/ui/HtmlContent';
+import AttachedFile from '@/components/ui/AttachedFile';
 
 interface Props {
-  content: { text: string; image?: string; num_pairs?: number };
+  content: { text: string; image?: string; num_pairs?: number; file?: { url: string; name: string } };
   value: unknown;
   onChange: (value: unknown) => void;
   disabled?: boolean;
@@ -43,6 +44,7 @@ export default function NumberPairs({ content, value, onChange, disabled }: Prop
       {content.image && (
         <img src={content.image} alt="" className="mb-4 max-w-full rounded-lg border" />
       )}
+      <AttachedFile file={content.file} />
       <label className="block text-sm text-gray-500 mb-2">
         Введите {count} {pairWord(count)} чисел:
       </label>

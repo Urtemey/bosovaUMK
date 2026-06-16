@@ -1,6 +1,7 @@
 'use client';
 
 import HtmlContent from '@/components/ui/HtmlContent';
+import AttachedFile from '@/components/ui/AttachedFile';
 import SingleChoice from '@/components/questions/SingleChoice';
 import MultipleChoice from '@/components/questions/MultipleChoice';
 
@@ -19,7 +20,7 @@ interface FieldBlock {
 type Block = HtmlBlock | FieldBlock;
 
 interface Props {
-  content: { text: string; image?: string; blocks?: Block[] };
+  content: { text: string; image?: string; blocks?: Block[]; file?: { url: string; name: string } };
   value: unknown;
   onChange: (value: unknown) => void;
   disabled?: boolean;
@@ -48,6 +49,7 @@ export default function FreeForm({ content, value, onChange, disabled }: Props) 
       {content.image && (
         <img src={content.image} alt="" style={{ marginBottom: '1rem', maxWidth: '100%', borderRadius: '0.75rem', border: '1px solid var(--color-border)' }} />
       )}
+      <AttachedFile file={content.file} />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         {blocks.map((block, i) => {

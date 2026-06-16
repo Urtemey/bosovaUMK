@@ -1,9 +1,10 @@
 'use client';
 
 import HtmlContent from '@/components/ui/HtmlContent';
+import AttachedFile from '@/components/ui/AttachedFile';
 
 interface Props {
-  content: { text: string; placeholder?: string; image?: string };
+  content: { text: string; placeholder?: string; image?: string; file?: { url: string; name: string } };
   value: unknown;
   onChange: (value: unknown) => void;
   disabled?: boolean;
@@ -16,6 +17,7 @@ export default function TextInput({ content, value, onChange, disabled }: Props)
       {content.image && (
         <img src={content.image} alt="" className="mb-4 max-w-full rounded-lg border" />
       )}
+      <AttachedFile file={content.file} />
       <div className="relative">
         <label className="block text-sm text-gray-500 mb-1.5">Ответ:</label>
         <input

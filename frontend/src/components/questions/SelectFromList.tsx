@@ -1,6 +1,7 @@
 'use client';
 
 import HtmlContent from '@/components/ui/HtmlContent';
+import AttachedFile from '@/components/ui/AttachedFile';
 
 interface Dropdown {
   options: string[];
@@ -15,6 +16,7 @@ interface Props {
     options?: string[];
     dropdowns?: Dropdown[];
     image?: string;
+    file?: { url: string; name: string };
   };
   value: unknown;
   onChange: (value: unknown) => void;
@@ -39,6 +41,7 @@ export default function SelectFromList({ content, value, onChange, disabled }: P
         {content.image && (
           <img src={content.image} alt="" style={{ marginBottom: '1rem', maxWidth: '100%', borderRadius: '0.75rem', border: '1px solid var(--color-border)' }} />
         )}
+        <AttachedFile file={content.file} />
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
           {content.dropdowns.map((dd, i) => {
             const key = String(i);
@@ -77,6 +80,7 @@ export default function SelectFromList({ content, value, onChange, disabled }: P
         {content.image && (
           <img src={content.image} alt="" style={{ marginBottom: '1rem', maxWidth: '100%', borderRadius: '0.75rem', border: '1px solid var(--color-border)' }} />
         )}
+        <AttachedFile file={content.file} />
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
           {(content.rows || []).map((row, ri) => {
             const key = String(ri);
@@ -114,6 +118,7 @@ export default function SelectFromList({ content, value, onChange, disabled }: P
       {content.image && (
         <img src={content.image} alt="" style={{ marginBottom: '1rem', maxWidth: '100%', borderRadius: '0.75rem', border: '1px solid var(--color-border)' }} />
       )}
+      <AttachedFile file={content.file} />
       <div style={{ overflowX: 'auto' }}>
         <table className="journal-table" style={{ minWidth: '24rem' }}>
           <thead>

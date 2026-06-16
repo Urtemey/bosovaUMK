@@ -15,9 +15,16 @@ export default function ImportPage() {
   const [grade, setGrade] = useState(5);
   const [topic, setTopic] = useState('');
   const [file, setFile] = useState<File | null>(null);
+  const [images, setImages] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [result, setResult] = useState<{ testId: number; count: number } | null>(null);
+  const [result, setResult] = useState<{
+    testId: number;
+    count: number;
+    imagesUploaded: number;
+    imagesFailed: number;
+    imagesError: string | null;
+  } | null>(null);
 
   // Wait for AuthProvider to hydrate from localStorage before checking role
   useEffect(() => { setMounted(true); }, []);
@@ -46,11 +53,29 @@ export default function ImportPage() {
       formData.append('grade', String(grade));
       if (topic) formData.append('topic', topic);
 
+      if (images.length > 0) {
+        const paths: string[] = [];
+        for (const img of images) {
+          formData.append('images', img);
+          paths.push(img.webkitRelativePath || img.name);
+        }
+        formData.append('image_paths', JSON.stringify(paths));
+      }
+
       const data = await testsApi.importHtml(token!, formData) as {
         test: { id: number };
         imported_count: number;
+        images_uploaded?: number;
+        images_failed?: number;
+        images_error?: string | null;
       };
-      setResult({ testId: data.test.id, count: data.imported_count });
+      setResult({
+        testId: data.test.id,
+        count: data.imported_count,
+        imagesUploaded: data.images_uploaded ?? 0,
+        imagesFailed: data.images_failed ?? 0,
+        imagesError: data.images_error ?? null,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка импорта');
     } finally {
@@ -94,9 +119,20 @@ export default function ImportPage() {
           <p className="t-subtitle" style={{ marginBottom: '0.375rem' }}>
             Импортировано {result.count} {result.count === 1 ? 'вопрос' : result.count < 5 ? 'вопроса' : 'вопросов'}
           </p>
-          <p className="t-caption" style={{ marginBottom: '1.25rem' }}>
+          <p className="t-caption" style={{ marginBottom: result.imagesUploaded || result.imagesFailed || result.imagesError ? '0.5rem' : '1.25rem' }}>
             Тест создан как черновик. Проверьте вопросы и опубликуйте.
           </p>
+          {(result.imagesUploaded > 0 || result.imagesFailed > 0) && (
+            <p className="t-caption" style={{ marginBottom: result.imagesError ? '0.5rem' : '1.25rem' }}>
+              Изображений загружено: {result.imagesUploaded}
+              {result.imagesFailed > 0 && ` · не удалось: ${result.imagesFailed}`}
+            </p>
+          )}
+          {result.imagesError && (
+            <p className="t-caption" style={{ marginBottom: '1.25rem', color: 'var(--color-danger)' }}>
+              Изображения не загружены: {result.imagesError}
+            </p>
+          )}
           <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link href={`/test/${result.testId}`} className="btn btn-primary">
               Открыть тест
@@ -107,6 +143,7 @@ export default function ImportPage() {
               onClick={() => {
                 setResult(null);
                 setFile(null);
+                setImages([]);
                 setTitle('');
                 setTopic('');
               }}
@@ -215,6 +252,49 @@ export default function ImportPage() {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Images referenced by the HTML */}
+          <div style={{ marginBottom: '1.25rem' }}>
+            <label className="label" style={{ display: 'block', marginBottom: '0.375rem' }}>
+              Изображения к вопросам (необязательно)
+            </label>
+            <div
+              style={{
+                border: '2px dashed var(--color-border)',
+                borderRadius: '0.75rem',
+                padding: '1rem',
+                textAlign: 'center',
+                cursor: 'pointer',
+                background: images.length ? 'rgba(37, 99, 235, 0.04)' : 'var(--color-surface)',
+                transition: 'all 0.15s ease',
+              }}
+              onClick={() => document.getElementById('images-input')?.click()}
+            >
+              <input
+                id="images-input"
+                type="file"
+                accept="image/*"
+                multiple
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const fs = e.target.files ? Array.from(e.target.files) : [];
+                  if (fs.length) setImages(fs);
+                }}
+              />
+              {images.length ? (
+                <p style={{ fontWeight: 500, color: 'var(--color-text-primary)', fontSize: '0.9375rem' }}>
+                  Выбрано изображений: {images.length}
+                </p>
+              ) : (
+                <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9375rem' }}>
+                  Выберите изображения, на которые ссылается HTML
+                </p>
+              )}
+            </div>
+            <p className="t-caption" style={{ marginTop: '0.375rem' }}>
+              Загрузятся в S3 с сохранением имён, чтобы ссылки в вопросах работали.
+            </p>
           </div>
 
           {error && (

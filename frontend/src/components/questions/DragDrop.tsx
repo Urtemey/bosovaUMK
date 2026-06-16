@@ -1,6 +1,7 @@
 'use client';
 
 import HtmlContent from '@/components/ui/HtmlContent';
+import AttachedFile from '@/components/ui/AttachedFile';
 
 interface Props {
   content: {
@@ -8,6 +9,7 @@ interface Props {
     items: string[];
     slots: string[];
     image?: string;
+    file?: { url: string; name: string };
   };
   value: unknown;
   onChange: (value: unknown) => void;
@@ -40,6 +42,7 @@ export default function DragDrop({ content, value, onChange, disabled }: Props) 
       {content.image && (
         <img src={content.image} alt="" style={{ marginBottom: '1rem', maxWidth: '100%', borderRadius: '0.75rem', border: '1px solid var(--color-border)' }} />
       )}
+      <AttachedFile file={content.file} />
       <div className="space-y-3">
         {content.slots.map((slot, si) => {
           const slotIdx = String(si);

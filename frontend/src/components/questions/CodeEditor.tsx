@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import HtmlContent from '@/components/ui/HtmlContent';
+import AttachedFile from '@/components/ui/AttachedFile';
 
 /* ── Pyodide loader (singleton) ─────────────────────────────── */
 let pyodidePromise: Promise<unknown> | null = null;
@@ -76,6 +77,7 @@ interface Props {
     test_cases?: TestCase[];
     starter_code?: string;
     image?: string;
+    file?: { url: string; name: string };
   };
   value: unknown;
   onChange: (value: unknown) => void;
@@ -297,6 +299,7 @@ sys.stdout = sys.__stdout__
       {content.image && (
         <img src={content.image} alt="" style={{ marginBottom: '1rem', maxWidth: '100%', borderRadius: '0.75rem', border: '1px solid var(--color-border)' }} />
       )}
+      <AttachedFile file={content.file} />
 
       {/* Language badge */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>

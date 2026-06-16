@@ -1,9 +1,10 @@
 'use client';
 
 import HtmlContent from '@/components/ui/HtmlContent';
+import AttachedFile from '@/components/ui/AttachedFile';
 
 interface Props {
-  content: { text: string; options: string[]; image?: string; option_images?: string[] };
+  content: { text: string; options: string[]; image?: string; option_images?: string[]; file?: { url: string; name: string } };
   value: unknown;
   onChange: (value: unknown) => void;
   disabled?: boolean;
@@ -18,6 +19,7 @@ export default function SingleChoice({ content, value, onChange, disabled }: Pro
       {content.image && (
         <img src={content.image} alt="" style={{ marginBottom: '1rem', maxWidth: '100%', borderRadius: '0.75rem', border: '1px solid var(--color-border)' }} />
       )}
+      <AttachedFile file={content.file} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         {content.options.map((option, i) => {
           const isSelected = value === i;

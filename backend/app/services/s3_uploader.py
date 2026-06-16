@@ -4,8 +4,10 @@
 чтобы под видом картинки нельзя было залить произвольный файл.
 """
 
+import os
 import uuid
 from functools import lru_cache
+from urllib.parse import quote
 
 from flask import current_app
 
@@ -16,6 +18,18 @@ class S3NotConfigured(Exception):
 
 class UnsupportedImage(Exception):
     """Файл не является поддерживаемым изображением."""
+
+
+class UnsupportedFile(Exception):
+    """Файл имеет недопустимое расширение."""
+
+
+# Разрешённые расширения для файлов-вложений к условию задачи.
+ALLOWED_FILE_EXTENSIONS = {
+    'xlsx', 'xls', 'csv', 'txt', 'doc', 'docx',
+    'pdf', 'rtf', 'odt', 'ods', 'zip', 'json', 'xml',
+    'pptx', 'ppt',
+}
 
 
 def _detect(head: bytes):
@@ -75,5 +89,86 @@ def upload_image(data: bytes) -> str:
         Key=key,
         Body=data,
         ContentType=content_type,
+    )
+    return f"{_public_base()}/{key}"
+
+
+def normalize_image_relpath(rel_path: str) -> str:
+    """Приводит путь к виду относительно папки images/ (прямые слеши, без обхода).
+
+    Принимает как 'foo.png', так и 'img/foo.png' или 'images/img/foo.png'
+    (ведущий 'images/' срезается). Защищает от обхода каталогов ('..').
+    Возвращает путь БЕЗ префикса images/ — например 'foo.png' или 'img/foo.png'.
+    """
+    rel = (rel_path or '').replace('\\', '/').lstrip('/')
+    if rel.startswith('images/'):
+        rel = rel[len('images/'):]
+    parts = [p for p in rel.split('/') if p not in ('', '.', '..')]
+    return '/'.join(parts)
+
+
+def upload_content_image(data: bytes, rel_path: str, content_type: str | None = None) -> str:
+    """Загружает изображение к условию в S3 по фиксированному ключу images/<rel_path>.
+
+    В отличие от upload_image (случайное имя), здесь имя/подпапки СОХРАНЯЮТСЯ —
+    ключ объекта совпадает со ссылками, которые формируют html_importer и
+    migrate_images_to_s3 (S3_IMAGES_BASE_URL/<rel_path>), поэтому ссылки в БД
+    не ломаются.
+
+    content_type: если не задан — определяется по магическим байтам, затем по
+    расширению, иначе application/octet-stream.
+
+    Возвращает ключ объекта в бакете (например 'images/img/foo.png').
+    Бросает UnsupportedImage если путь пуст, S3NotConfigured если ключи не заданы.
+    """
+    rel = normalize_image_relpath(rel_path)
+    if not rel:
+        raise UnsupportedImage('Пустое имя файла изображения')
+
+    if content_type is None:
+        _, detected = _detect(data[:16])
+        if detected:
+            content_type = detected
+        else:
+            import mimetypes
+            content_type = mimetypes.guess_type(rel)[0] or 'application/octet-stream'
+
+    key = f"images/{rel}"
+    client = _client()
+    client.put_object(
+        Bucket=current_app.config['S3_BUCKET'],
+        Key=key,
+        Body=data,
+        ContentType=content_type,
+    )
+    return key
+
+
+def upload_file(data: bytes, filename: str) -> str:
+    """Загружает произвольный файл-вложение в папку files/ бакета.
+
+    Расширение определяется по имени файла и проверяется по белому списку.
+    Файл отдаётся как attachment (Content-Disposition) с исходным именем,
+    чтобы:
+      - при скачивании сохранялось человекочитаемое (в т.ч. кириллическое) имя,
+      - содержимое не рендерилось в браузере (html/svg не исполнятся).
+    Возвращает публичный URL. Бросает UnsupportedFile / S3NotConfigured.
+    """
+    ext = os.path.splitext(filename)[1].lstrip('.').lower()
+    if ext not in ALLOWED_FILE_EXTENSIONS:
+        allowed = ', '.join(sorted(ALLOWED_FILE_EXTENSIONS))
+        raise UnsupportedFile(f'Недопустимый тип файла. Разрешены: {allowed}')
+
+    safe_name = os.path.basename(filename) or f'file.{ext}'
+    disposition = f"attachment; filename*=UTF-8''{quote(safe_name)}"
+
+    key = f"files/{uuid.uuid4().hex}.{ext}"
+    client = _client()
+    client.put_object(
+        Bucket=current_app.config['S3_BUCKET'],
+        Key=key,
+        Body=data,
+        ContentType='application/octet-stream',
+        ContentDisposition=disposition,
     )
     return f"{_public_base()}/{key}"

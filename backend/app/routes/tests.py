@@ -337,12 +337,23 @@ def update_question(test_id, question_id):
 @tests_bp.route('/import-html', methods=['POST'])
 @jwt_required()
 def import_from_html():
-    """Import questions from contenttests HTML file. Accepts multipart/form-data or JSON."""
+    """Import questions from contenttests HTML file. Accepts multipart/form-data or JSON.
+
+    Дополнительно (multipart): поле `images` — файлы изображений, на которые
+    ссылается HTML; поле `image_paths` — JSON-массив относительных путей в том же
+    порядке (из webkitRelativePath; если пусто — берётся имя файла). Изображения
+    кладутся в S3 по ключу images/<относительный путь>, чтобы ссылки в вопросах
+    указывали на реальные объекты.
+    """
+    import json
     from app.services.html_importer import parse_html_questions
 
     teacher_id, error = require_role('admin')
     if error:
         return error
+
+    image_files = []
+    image_paths = []
 
     if request.content_type and 'multipart/form-data' in request.content_type:
         file = request.files.get('file')
@@ -352,6 +363,12 @@ def import_from_html():
         title = request.form.get('title', file.filename or 'Импортированный тест').replace('.html', '')
         grade = int(request.form.get('grade', 9))
         topic = request.form.get('topic', '')
+
+        image_files = request.files.getlist('images')
+        try:
+            image_paths = json.loads(request.form.get('image_paths') or '[]')
+        except (ValueError, TypeError):
+            image_paths = []
     else:
         data = request.get_json()
         if not data or not data.get('html_content'):
@@ -393,9 +410,44 @@ def import_from_html():
 
     db.session.commit()
 
+    # Загрузка сопутствующих изображений в S3 (если переданы).
+    images_uploaded = 0
+    images_failed = 0
+    images_error = None
+    if image_files:
+        from app.services.s3_uploader import (
+            upload_content_image,
+            _detect,
+            S3NotConfigured,
+        )
+        for idx, img in enumerate(image_files):
+            if img is None or img.filename == '':
+                continue
+            rel = image_paths[idx] if idx < len(image_paths) and image_paths[idx] else img.filename
+            try:
+                data = img.read()
+                if not data:
+                    images_failed += 1
+                    continue
+                # Принимаем только настоящие изображения (по магическим байтам).
+                _, content_type = _detect(data[:16])
+                if content_type is None:
+                    images_failed += 1
+                    continue
+                upload_content_image(data, rel, content_type=content_type)
+                images_uploaded += 1
+            except S3NotConfigured as e:
+                images_error = str(e)
+                break
+            except Exception:
+                images_failed += 1
+
     return jsonify({
         'test': test.to_dict(include_questions=True),
         'imported_count': len(parsed_questions),
+        'images_uploaded': images_uploaded,
+        'images_failed': images_failed,
+        'images_error': images_error,
     }), 201
 
 

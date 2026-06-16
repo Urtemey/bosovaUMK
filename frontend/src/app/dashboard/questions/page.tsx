@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth';
 import { questionsApi, testsApi } from '@/lib/api';
 import HtmlContent from '@/components/ui/HtmlContent';
+import AttachedFile from '@/components/ui/AttachedFile';
 
 const GRADES = [5, 6, 7, 8, 9, 10, 11];
 const QUESTION_TYPES: Record<string, string> = {
@@ -539,6 +540,9 @@ function QuestionCard({ question: q, isSelected, onToggle, token, onUpdate }: {
                       border: '1px solid var(--color-border)', marginTop: '0.5rem',
                     }} />
                   )}
+                  <div style={{ marginTop: '0.5rem' }}>
+                    <AttachedFile file={content.file as { url: string; name: string } | undefined} />
+                  </div>
                   {options.length > 0 && (
                     <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                       {options.map((opt, i) => (
