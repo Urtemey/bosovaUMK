@@ -60,7 +60,13 @@ def _client():
         region_name=cfg['S3_REGION'],
         aws_access_key_id=cfg['S3_ACCESS_KEY'],
         aws_secret_access_key=cfg['S3_SECRET_KEY'],
-        config=BotoConfig(signature_version='s3v4'),
+        # таймауты, чтобы недоступность S3 не вешала запрос на минуты
+        config=BotoConfig(
+            signature_version='s3v4',
+            connect_timeout=5,
+            read_timeout=10,
+            retries={'max_attempts': 2},
+        ),
     )
 
 
@@ -180,6 +186,39 @@ def delete_object(key: str) -> None:
         return
     client = _client()
     client.delete_object(Bucket=current_app.config['S3_BUCKET'], Key=key)
+
+
+def delete_objects(keys) -> tuple[int, int]:
+    """Удаляет объекты пачками (S3 delete_objects, до 1000 за раз).
+
+    Возвращает (deleted, failed). Бросает S3NotConfigured, если ключи не заданы.
+    При ошибке батч-API падает обратно на поштучное удаление.
+    """
+    keys = [k for k in dict.fromkeys(keys) if k]  # уникальные, без пустых
+    if not keys:
+        return 0, 0
+    client = _client()
+    bucket = current_app.config['S3_BUCKET']
+    deleted = failed = 0
+    for i in range(0, len(keys), 1000):
+        chunk = keys[i:i + 1000]
+        try:
+            resp = client.delete_objects(
+                Bucket=bucket,
+                Delete={'Objects': [{'Key': k} for k in chunk], 'Quiet': True},
+            )
+            errs = resp.get('Errors', []) or []
+            failed += len(errs)
+            deleted += len(chunk) - len(errs)
+        except Exception:
+            # некоторые S3-совместимые хранилища не поддерживают батч — поштучно
+            for k in chunk:
+                try:
+                    client.delete_object(Bucket=bucket, Key=k)
+                    deleted += 1
+                except Exception:
+                    failed += 1
+    return deleted, failed
 
 
 def upload_file(data: bytes, filename: str) -> str:

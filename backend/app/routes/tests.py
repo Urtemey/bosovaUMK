@@ -708,29 +708,27 @@ def bulk_delete_tests():
     images_deleted = images_skipped = images_failed = 0
     s3_error = None
     if delete_s3_images and candidate_keys:
-        # ключи, которые всё ещё используются оставшимися вопросами
-        still_used = set()
-        for q in Question.query.all():
-            if not q.content:
-                continue
-            ks = _s3_keys_in_content(q.content)
-            still_used |= (ks & candidate_keys)
-            if still_used >= candidate_keys:
-                break
-
-        from app.services.s3_uploader import delete_object, S3NotConfigured
+        # Какие ключи всё ещё используются оставшимися вопросами — проверяем
+        # точечными SQL EXISTS (по числу ключей), а не загрузкой всех вопросов.
+        to_delete = []
         for key in candidate_keys:
-            if key in still_used:
+            used = db.session.query(Question.id).filter(
+                db.cast(Question.content, db.Text).ilike(f'%{key}%')
+            ).first()
+            if used:
                 images_skipped += 1
-                continue
+            else:
+                to_delete.append(key)
+
+        # Удаление из S3 не должно валить/вешать запрос — тесты уже удалены.
+        if to_delete:
             try:
-                delete_object(key)
-                images_deleted += 1
+                from app.services.s3_uploader import delete_objects, S3NotConfigured
+                images_deleted, images_failed = delete_objects(to_delete)
             except S3NotConfigured as e:
                 s3_error = str(e)
-                break
-            except Exception:
-                images_failed += 1
+            except Exception as e:
+                s3_error = f'Ошибка удаления из S3: {e}'
 
     return jsonify({
         'deleted_tests': len(tests),

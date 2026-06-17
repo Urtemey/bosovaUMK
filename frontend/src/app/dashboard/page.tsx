@@ -284,6 +284,15 @@ export default function DashboardPage() {
       return next;
     });
 
+  const toggleSelectGrade = (gradeTests: Test[]) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      const allSelected = gradeTests.every((t) => next.has(t.id));
+      if (allSelected) gradeTests.forEach((t) => next.delete(t.id));
+      else gradeTests.forEach((t) => next.add(t.id));
+      return next;
+    });
+
   const exitSelectMode = () => {
     setSelectMode(false);
     setSelectedIds(new Set());
@@ -542,6 +551,16 @@ export default function DashboardPage() {
                         {gradeTests.length}{' '}
                         {gradeTests.length === 1 ? 'тест' : gradeTests.length < 5 ? 'теста' : 'тестов'}
                       </span>
+                      {selectMode && (
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-ghost"
+                          style={{ marginLeft: 'auto' }}
+                          onClick={() => toggleSelectGrade(gradeTests)}
+                        >
+                          {gradeTests.every((t) => selectedIds.has(t.id)) ? 'Снять класс' : 'Выбрать класс'}
+                        </button>
+                      )}
                     </div>
 
                     <div className="card-grid">
