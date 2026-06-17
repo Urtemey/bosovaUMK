@@ -98,6 +98,24 @@ export const testsApi = {
     }
     return res.json();
   },
+  importFiles: async (token: string, formData: FormData) => {
+    const res = await fetch(`${API_BASE}/tests/import`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ error: 'Ошибка сервера' }));
+      throw new Error(error.error || `HTTP ${res.status}`);
+    }
+    return res.json();
+  },
+  bulkDelete: (token: string, testIds: number[], deleteS3Images: boolean) =>
+    apiFetch('/tests/bulk-delete', {
+      method: 'POST',
+      body: JSON.stringify({ test_ids: testIds, delete_s3_images: deleteS3Images }),
+      token,
+    }),
 };
 
 // Questions (browse)

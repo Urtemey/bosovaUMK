@@ -451,6 +451,297 @@ def import_from_html():
     }), 201
 
 
+def _upload_provided_images(image_files, image_paths):
+    """Заливает переданные вручную файлы изображений в S3 по их путям.
+
+    Используется для HTML-импорта, где картинки лежат отдельными файлами и в
+    HTML на них ссылаются по относительному пути (images/<rel>). Возвращает
+    (uploaded, failed, error).
+    """
+    if not image_files:
+        return 0, 0, None
+    from app.services.s3_uploader import upload_content_image, _detect, S3NotConfigured
+    uploaded = failed = 0
+    error = None
+    for idx, img in enumerate(image_files):
+        if img is None or img.filename == '':
+            continue
+        rel = image_paths[idx] if idx < len(image_paths) and image_paths[idx] else img.filename
+        try:
+            data = img.read()
+            if not data:
+                failed += 1
+                continue
+            _, content_type = _detect(data[:16])
+            if content_type is None:
+                failed += 1
+                continue
+            upload_content_image(data, rel, content_type=content_type)
+            uploaded += 1
+        except S3NotConfigured as e:
+            error = str(e)
+            break
+        except Exception:
+            failed += 1
+    return uploaded, failed, error
+
+
+def _create_test_with_questions(title, grade, topic, teacher_id, parsed_questions):
+    """Создаёт черновик теста и его вопросы. Без commit."""
+    test = Test(
+        title=title,
+        grade=grade,
+        topic=topic or None,
+        created_by=teacher_id,
+        settings={},
+        is_published=False,
+    )
+    db.session.add(test)
+    db.session.flush()
+    for order, q in enumerate(parsed_questions, start=1):
+        db.session.add(Question(
+            test_id=test.id,
+            order=order,
+            question_type=q['question_type'],
+            content=q['content'],
+            correct_answer=q['correct_answer'],
+            points=q.get('points', 1),
+        ))
+    return test
+
+
+@tests_bp.route('/import', methods=['POST'])
+@jwt_required()
+def import_files():
+    """Массовый импорт тестов из нескольких файлов: HTML (contenttests) и/или
+    ZIP (IMS/QTI content package, DL_RES_*.zip).
+
+    multipart/form-data:
+      - files: один или несколько файлов (.html, .htm, .zip)
+      - grade (int), topic (str) — применяются ко всем
+      - title (str) — название (используется, если файл один)
+      - images / image_paths — опционально, картинки для HTML (как раньше)
+
+    Каждый файл -> отдельный тест-черновик. Картинки из ZIP заливаются в S3
+    автоматически. Возвращает массив результатов по каждому файлу.
+    """
+    import json
+    from app.services.html_importer import parse_html_questions
+    from app.services.qti_importer import parse_qti_zip, QtiParseError
+    from app.services.s3_uploader import upload_image, S3NotConfigured
+
+    teacher_id, error = require_role('admin')
+    if error:
+        return error
+
+    if not (request.content_type and 'multipart/form-data' in request.content_type):
+        return jsonify({'error': 'Ожидается multipart/form-data'}), 400
+
+    files = request.files.getlist('files')
+    if not files:
+        single = request.files.get('file')
+        if single:
+            files = [single]
+    files = [f for f in files if f and f.filename]
+    if not files:
+        return jsonify({'error': 'Файлы не загружены'}), 400
+
+    grade = int(request.form.get('grade', 9))
+    topic = request.form.get('topic', '')
+    explicit_title = request.form.get('title', '').strip()
+
+    # картинки, переданные вручную (для HTML)
+    image_files = request.files.getlist('images')
+    try:
+        image_paths = json.loads(request.form.get('image_paths') or '[]')
+    except (ValueError, TypeError):
+        image_paths = []
+
+    # заливаем переданные вручную картинки один раз (общий ключ images/<rel>)
+    manual_uploaded, manual_failed, manual_error = _upload_provided_images(image_files, image_paths)
+
+    # загрузчик для картинок из ZIP: случайное имя в S3, без коллизий
+    s3_disabled = {'flag': False}
+
+    def zip_uploader(data, filename):
+        if s3_disabled['flag']:
+            return None
+        try:
+            return upload_image(data)
+        except S3NotConfigured:
+            s3_disabled['flag'] = True
+            return None
+        except Exception:
+            return None
+
+    results = []
+    total_tests = 0
+    total_questions = 0
+    total_images = manual_uploaded
+
+    for f in files:
+        name = f.filename or 'файл'
+        ext = name.rsplit('.', 1)[-1].lower() if '.' in name else ''
+        title = explicit_title if (explicit_title and len(files) == 1) else name.rsplit('.', 1)[0]
+        try:
+            if ext == 'zip':
+                data = f.read()
+                parsed = parse_qti_zip(data, uploader=zip_uploader)
+                questions = parsed['questions']
+                if not questions:
+                    results.append({'filename': name, 'ok': False, 'error': 'Вопросы не найдены в архиве'})
+                    continue
+                zip_title = title if explicit_title and len(files) == 1 else (parsed.get('title') or title)
+                test = _create_test_with_questions(zip_title, grade, topic, teacher_id, questions)
+                db.session.commit()
+                total_tests += 1
+                total_questions += len(questions)
+                total_images += parsed.get('images_uploaded', 0)
+                results.append({
+                    'filename': name,
+                    'ok': True,
+                    'test_id': test.id,
+                    'title': test.title,
+                    'imported_count': len(questions),
+                    'images_uploaded': parsed.get('images_uploaded', 0),
+                    'images_failed': parsed.get('images_failed', 0),
+                    'unsupported': parsed.get('unsupported', 0),
+                })
+            elif ext in ('html', 'htm'):
+                html_content = f.read().decode('utf-8', errors='replace')
+                questions = parse_html_questions(html_content)
+                if not questions:
+                    results.append({'filename': name, 'ok': False, 'error': 'Вопросы не найдены в файле'})
+                    continue
+                test = _create_test_with_questions(title, grade, topic, teacher_id, questions)
+                db.session.commit()
+                total_tests += 1
+                total_questions += len(questions)
+                results.append({
+                    'filename': name,
+                    'ok': True,
+                    'test_id': test.id,
+                    'title': test.title,
+                    'imported_count': len(questions),
+                })
+            else:
+                results.append({'filename': name, 'ok': False, 'error': 'Неподдерживаемый формат (нужен .html или .zip)'})
+        except QtiParseError as e:
+            db.session.rollback()
+            results.append({'filename': name, 'ok': False, 'error': str(e)})
+        except Exception as e:
+            db.session.rollback()
+            results.append({'filename': name, 'ok': False, 'error': f'Ошибка: {e}'})
+
+    return jsonify({
+        'results': results,
+        'total_tests': total_tests,
+        'total_questions': total_questions,
+        'total_images_uploaded': total_images,
+        'manual_images_failed': manual_failed,
+        's3_error': manual_error or ('S3 не настроен — изображения из архивов не загружены' if s3_disabled['flag'] else None),
+    }), 201
+
+
+def _s3_keys_in_content(content):
+    """Собирает ключи объектов S3 (images/…, files/…), на которые ссылается
+    JSON-содержимое вопроса (поля image/file и встроенные <img src> в HTML)."""
+    import json
+    from app.services.s3_uploader import key_from_url
+    keys = set()
+    try:
+        blob = json.dumps(content, ensure_ascii=False)
+    except (TypeError, ValueError):
+        return keys
+    # любые http(s)-ссылки + значения src="..." внутри HTML
+    for url in re.findall(r'https?://[^\s"\'<>\\)]+', blob):
+        k = key_from_url(url)
+        if k:
+            keys.add(k)
+    return keys
+
+
+@tests_bp.route('/bulk-delete', methods=['POST'])
+@jwt_required()
+def bulk_delete_tests():
+    """Массовое удаление тестов с опциями.
+
+    Body: {
+      "test_ids": [int, ...],
+      "delete_s3_images": bool   # удалять связанные картинки из S3
+                                 # (только те, что больше нигде не используются)
+    }
+    Вопросы выбранных тестов удаляются вместе с тестами (каскад); связанные
+    копии в ДРУГИХ тестах не трогаются.
+    """
+    teacher_id, error = require_role('admin')
+    if error:
+        return error
+
+    data = request.get_json() or {}
+    test_ids = data.get('test_ids')
+    delete_s3_images = bool(data.get('delete_s3_images', False))
+
+    if not isinstance(test_ids, list) or not test_ids:
+        return jsonify({'error': 'test_ids (непустой список) обязателен'}), 400
+
+    tests = Test.query.filter(Test.id.in_(test_ids), Test.created_by == teacher_id).all()
+    if not tests:
+        return jsonify({'error': 'Тесты не найдены или нет доступа'}), 404
+
+    owned_ids = [t.id for t in tests]
+
+    # ключи S3, на которые ссылаются удаляемые вопросы (до удаления)
+    candidate_keys = set()
+    deleted_question_ids = set()
+    if delete_s3_images:
+        for q in Question.query.filter(Question.test_id.in_(owned_ids)).all():
+            deleted_question_ids.add(q.id)
+            candidate_keys |= _s3_keys_in_content(q.content)
+
+    deleted_questions = Question.query.filter(Question.test_id.in_(owned_ids)).count()
+
+    for test in tests:
+        _cascade_delete_test(test)
+    db.session.commit()
+
+    images_deleted = images_skipped = images_failed = 0
+    s3_error = None
+    if delete_s3_images and candidate_keys:
+        # ключи, которые всё ещё используются оставшимися вопросами
+        still_used = set()
+        for q in Question.query.all():
+            if not q.content:
+                continue
+            ks = _s3_keys_in_content(q.content)
+            still_used |= (ks & candidate_keys)
+            if still_used >= candidate_keys:
+                break
+
+        from app.services.s3_uploader import delete_object, S3NotConfigured
+        for key in candidate_keys:
+            if key in still_used:
+                images_skipped += 1
+                continue
+            try:
+                delete_object(key)
+                images_deleted += 1
+            except S3NotConfigured as e:
+                s3_error = str(e)
+                break
+            except Exception:
+                images_failed += 1
+
+    return jsonify({
+        'deleted_tests': len(tests),
+        'deleted_questions': deleted_questions,
+        'images_deleted': images_deleted,
+        'images_skipped': images_skipped,
+        'images_failed': images_failed,
+        's3_error': s3_error,
+    })
+
+
 @tests_bp.route('/<int:test_id>/questions/<int:question_id>', methods=['DELETE'])
 @jwt_required()
 def delete_question(test_id, question_id):

@@ -14,11 +14,20 @@ from app import create_app, db
 from app.models.question import Question
 
 OLD_PREFIX = '/content-images/'
-NEW_BASE = os.environ.get('S3_IMAGES_BASE_URL', '').rstrip('/')
+
+# Конвенция: S3_IMAGES_BASE_URL — корень бакета (без /images), папка несётся
+# в ключе. Для устойчивости терпим устаревшее значение, оканчивающееся на /images.
+_RAW_BASE = os.environ.get('S3_IMAGES_BASE_URL', '').rstrip('/')
+if _RAW_BASE.endswith('/images'):
+    _RAW_BASE = _RAW_BASE[: -len('/images')]
+NEW_BASE = _RAW_BASE  # корень бакета
+
+# Ключ объекта изображения — images/<rel>, поэтому URL = {корень}/images/<rel>.
+NEW_PREFIX = NEW_BASE + '/images/' if NEW_BASE else ''
 
 if not NEW_BASE:
-    print("ERROR: Установи переменную S3_IMAGES_BASE_URL")
-    print("Пример: S3_IMAGES_BASE_URL=https://s3.twcstorage.ru/d662cfa7-f28b-468b-ac1d-2ee6c10950a0/images")
+    print("ERROR: Установи переменную S3_IMAGES_BASE_URL (корень бакета)")
+    print("Пример: S3_IMAGES_BASE_URL=https://s3.twcstorage.ru/d662cfa7-f28b-468b-ac1d-2ee6c10950a0")
     sys.exit(1)
 
 
@@ -26,7 +35,7 @@ def migrate_value(value):
     """Рекурсивно заменяет /content-images/ на S3 URL в любой структуре."""
     if isinstance(value, str):
         if OLD_PREFIX in value:
-            return value.replace(OLD_PREFIX, NEW_BASE + '/'), True
+            return value.replace(OLD_PREFIX, NEW_PREFIX), True
         return value, False
     elif isinstance(value, list):
         changed = False
@@ -59,7 +68,7 @@ with app.app_context():
     examples = []
 
     print(f"Найдено {total} вопросов в БД.")
-    print(f"  Замена: {OLD_PREFIX}* -> {NEW_BASE}/*")
+    print(f"  Замена: {OLD_PREFIX}* -> {NEW_PREFIX}*")
     print()
 
     for q in questions:

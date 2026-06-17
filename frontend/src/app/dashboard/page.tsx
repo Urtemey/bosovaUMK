@@ -52,6 +52,9 @@ function DashboardTestCard({
   onMove,
   deleting,
   moving,
+  selectMode,
+  selected,
+  onToggleSelect,
 }: {
   test: Test;
   index: number;
@@ -60,6 +63,9 @@ function DashboardTestCard({
   onMove: (test: Test) => void;
   deleting: boolean;
   moving: boolean;
+  selectMode: boolean;
+  selected: boolean;
+  onToggleSelect: (id: number) => void;
 }) {
   const bg = GRADE_BG[test.grade] ?? '#f0fdfa';
   const color = GRADE_COLOR[test.grade] ?? '#2b4c7e';
@@ -69,13 +75,35 @@ function DashboardTestCard({
     e.stopPropagation();
   };
 
-  return (
-    <Link
-      href={`/test/${test.id}`}
-      className="test-card animate-fade-up"
-      style={{ animationDelay: `${0.04 * Math.min(index, 10)}s`, opacity: deleting || moving ? 0.5 : 1 }}
-    >
+  const cardStyle: React.CSSProperties = {
+    animationDelay: `${0.04 * Math.min(index, 10)}s`,
+    opacity: deleting || moving ? 0.5 : 1,
+    ...(selectMode && selected
+      ? { outline: `2px solid ${color}`, outlineOffset: 2 }
+      : {}),
+    ...(selectMode ? { cursor: 'pointer' } : {}),
+  };
+
+  const inner = (
+    <>
       <div className="test-card-top" style={{ background: bg }}>
+        {selectMode && (
+          <div
+            style={{
+              position: 'absolute', top: '0.625rem', left: '0.625rem', zIndex: 2,
+              width: 22, height: 22, borderRadius: '50%',
+              border: `2px solid ${selected ? color : 'var(--color-text-muted)'}`,
+              background: selected ? color : 'rgba(255,255,255,0.85)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            {selected && (
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 6L9 17l-5-5" />
+              </svg>
+            )}
+          </div>
+        )}
         <span
           style={{
             position: 'absolute',
@@ -97,6 +125,7 @@ function DashboardTestCard({
           <path d="M8 7h8M8 11h8M8 15h5" />
         </svg>
 
+        {!selectMode && (
         <div style={{ position: 'absolute', top: '0.625rem', right: '0.625rem', display: 'flex', gap: '0.25rem' }}>
           {/* Перенести в класс */}
           <button
@@ -149,6 +178,7 @@ function DashboardTestCard({
             </svg>
           </button>
         </div>
+        )}
       </div>
 
       <div className="test-card-body">
@@ -185,9 +215,29 @@ function DashboardTestCard({
       <div className="test-card-footer">
         <span>{pluralQuestions(test.question_count)}</span>
         <span style={{ marginLeft: 'auto', color: 'var(--color-accent)', fontWeight: 600 }}>
-          Открыть →
+          {selectMode ? (selected ? 'Выбран' : 'Выбрать') : 'Открыть →'}
         </span>
       </div>
+    </>
+  );
+
+  if (selectMode) {
+    return (
+      <div
+        className="test-card animate-fade-up"
+        style={cardStyle}
+        onClick={() => onToggleSelect(test.id)}
+        role="button"
+        aria-pressed={selected}
+      >
+        {inner}
+      </div>
+    );
+  }
+
+  return (
+    <Link href={`/test/${test.id}`} className="test-card animate-fade-up" style={cardStyle}>
+      {inner}
     </Link>
   );
 }
@@ -220,6 +270,58 @@ export default function DashboardPage() {
   const [movingId, setMovingId] = useState<number | null>(null);
   const [splitTest, setSplitTest] = useState<Test | null>(null);
   const [moveTest, setMoveTest] = useState<Test | null>(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [deleteS3, setDeleteS3] = useState(false);
+
+  const toggleSelect = (id: number) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+    setBulkOpen(false);
+    setDeleteS3(false);
+  };
+
+  const handleBulkDelete = async () => {
+    if (!token || bulkDeleting || selectedIds.size === 0) return;
+    setBulkDeleting(true);
+    try {
+      const res = (await testsApi.bulkDelete(token, Array.from(selectedIds), deleteS3)) as {
+        deleted_tests: number;
+        deleted_questions: number;
+        images_deleted: number;
+        images_skipped: number;
+        images_failed: number;
+        s3_error: string | null;
+      };
+      setTests((prev) => prev.filter((t) => !selectedIds.has(t.id)));
+      const parts = [`Удалено тестов: ${res.deleted_tests}, вопросов: ${res.deleted_questions}`];
+      if (deleteS3) {
+        parts.push(
+          `Изображений из S3: удалено ${res.images_deleted}` +
+            (res.images_skipped ? `, оставлено (используются) ${res.images_skipped}` : '') +
+            (res.images_failed ? `, ошибок ${res.images_failed}` : ''),
+        );
+        if (res.s3_error) parts.push(res.s3_error);
+      }
+      window.alert(parts.join('\n'));
+      exitSelectMode();
+    } catch (e) {
+      console.error(e);
+      window.alert('Не удалось удалить выбранные тесты.');
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
 
   const handleMoveTest = async (test: Test, grade: number) => {
     if (!token || movingId !== null) return;
@@ -358,9 +460,34 @@ export default function DashboardPage() {
                 </p>
               )}
             </div>
-            <Link href="/dashboard/tests/new" className="btn btn-sm btn-primary">
-              + Новый тест
-            </Link>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              {selectMode ? (
+                <>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-danger"
+                    disabled={selectedIds.size === 0}
+                    onClick={() => setBulkOpen(true)}
+                  >
+                    Удалить выбранные ({selectedIds.size})
+                  </button>
+                  <button type="button" className="btn btn-sm btn-secondary" onClick={exitSelectMode}>
+                    Отмена
+                  </button>
+                </>
+              ) : (
+                <>
+                  {tests.length > 0 && (
+                    <button type="button" className="btn btn-sm btn-secondary" onClick={() => setSelectMode(true)}>
+                      Выбрать
+                    </button>
+                  )}
+                  <Link href="/dashboard/tests/new" className="btn btn-sm btn-primary">
+                    + Новый тест
+                  </Link>
+                </>
+              )}
+            </div>
           </div>
 
           {loading ? (
@@ -428,6 +555,9 @@ export default function DashboardPage() {
                           onMove={setMoveTest}
                           deleting={deletingId === test.id}
                           moving={movingId === test.id}
+                          selectMode={selectMode}
+                          selected={selectedIds.has(test.id)}
+                          onToggleSelect={toggleSelect}
                         />
                       ))}
                     </div>
@@ -451,6 +581,63 @@ export default function DashboardPage() {
             );
           }}
         />
+      )}
+
+      {bulkOpen && (
+        <div
+          onClick={() => !bulkDeleting && setBulkOpen(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(20,24,30,0.45)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="card-lg"
+            style={{ width: '100%', maxWidth: '26rem', padding: '1.5rem', background: 'var(--color-surface)' }}
+          >
+            <h2 className="t-subtitle" style={{ marginBottom: '0.5rem' }}>
+              Удалить тесты ({selectedIds.size})
+            </h2>
+            <p className="t-caption" style={{ marginBottom: '1rem' }}>
+              Будут удалены выбранные тесты вместе с их вопросами, назначениями,
+              попытками и ответами учеников. Это действие необратимо.
+            </p>
+
+            <label
+              style={{
+                display: 'flex', alignItems: 'flex-start', gap: '0.625rem',
+                padding: '0.75rem', borderRadius: '0.5rem', background: 'var(--color-surface-2)',
+                cursor: 'pointer', marginBottom: '1.25rem',
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={deleteS3}
+                onChange={(e) => setDeleteS3(e.target.checked)}
+                style={{ marginTop: '0.15rem', width: 16, height: 16, flexShrink: 0 }}
+              />
+              <span>
+                <span style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                  Удалить связанные изображения из S3
+                </span>
+                <span className="t-caption">
+                  Только те, что больше не используются другими тестами. Общие
+                  картинки останутся.
+                </span>
+              </span>
+            </label>
+
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <button type="button" className="btn btn-secondary" disabled={bulkDeleting} onClick={() => setBulkOpen(false)}>
+                Отмена
+              </button>
+              <button type="button" className="btn btn-danger" disabled={bulkDeleting} onClick={handleBulkDelete}>
+                {bulkDeleting ? 'Удаление...' : 'Удалить'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {moveTest && (

@@ -4,7 +4,27 @@ from bs4 import BeautifulSoup, NavigableString
 import re
 
 _S3_BASE = os.environ.get('S3_IMAGES_BASE_URL', '')
-_IMG_PREFIX = _S3_BASE.rstrip('/') + '/' if _S3_BASE else '/content-images/'
+
+
+def _s3_root() -> str:
+    """Корень бакета: S3_IMAGES_BASE_URL без завершающего /images (если задан)."""
+    base = _S3_BASE.rstrip('/')
+    if base.endswith('/images'):
+        base = base[: -len('/images')]
+    return base
+
+
+def _resolve_image_url(src: str) -> str:
+    """Ссылку 'images/<rel>' приводит к публичному URL.
+
+    Ключ объекта в S3 — images/<rel>, поэтому URL = {корень бакета}/images/<rel>.
+    Локально (S3 не задан) — /content-images/<rel>, раздаётся Flask из
+    contenttests/images/. Подпапки (img/) сохраняются.
+    """
+    rel = src[len('images/'):]
+    if _S3_BASE:
+        return _s3_root() + '/images/' + rel
+    return '/content-images/' + rel
 
 
 def parse_html_questions(html_content: str) -> list[dict]:
@@ -47,7 +67,7 @@ def parse_html_questions(html_content: str) -> list[dict]:
         img = block.find('img')
         image_src = img.get('src') or img.get('originalsrc') or img.get('originalSrc') if img else None
         if image_src and image_src.startswith('images/'):
-            image_src = _IMG_PREFIX + image_src[len('images/'):]
+            image_src = _resolve_image_url(image_src)
 
         # Try each question type in order of specificity
         parsed = (
@@ -237,7 +257,7 @@ def _li_content(li) -> str:
     if img:
         src = img.get('src') or img.get('originalsrc') or ''
         if src.startswith('images/'):
-            src = _IMG_PREFIX + src[len('images/'):]
+            src = _resolve_image_url(src)
         text = li.get_text(strip=True)
         if text:
             return f'{text} <img src="{src}">'

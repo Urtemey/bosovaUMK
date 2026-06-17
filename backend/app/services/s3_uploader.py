@@ -65,10 +65,20 @@ def _client():
 
 
 def _public_base() -> str:
+    """Корень бакета для публичных ссылок. URL объекта = {base}/{key},
+    где key всегда несёт папку (images/… или files/…).
+
+    Конвенция: S3_IMAGES_BASE_URL — корень бакета (без /images). Для
+    устойчивости терпим устаревшее значение, оканчивающееся на /images:
+    срезаем его, иначе ключ images/… дал бы двойной префикс /images/images/.
+    """
     cfg = current_app.config
     base = cfg.get('S3_IMAGES_BASE_URL')
     if base:
-        return base.rstrip('/')
+        base = base.rstrip('/')
+        if base.endswith('/images'):
+            base = base[: -len('/images')]
+        return base
     return f"{cfg['S3_ENDPOINT_URL'].rstrip('/')}/{cfg['S3_BUCKET']}"
 
 
@@ -142,6 +152,34 @@ def upload_content_image(data: bytes, rel_path: str, content_type: str | None = 
         ContentType=content_type,
     )
     return key
+
+
+def key_from_url(url: str) -> str | None:
+    """Извлекает ключ объекта S3 из публичного URL.
+
+    Ключи всегда несут папку (images/… или files/…), поэтому достаточно найти
+    в URL '/images/' или '/files/' и взять всё начиная с этой папки. Работает
+    при любом корне бакета. Возвращает None, если это не S3-ссылка (например,
+    локальный /content-images/… отдаётся Flask, а не S3).
+    """
+    if not url or not isinstance(url, str):
+        return None
+    if not (url.startswith('http://') or url.startswith('https://')):
+        return None
+    url = url.split('?')[0].split('#')[0]
+    for folder in ('/images/', '/files/'):
+        idx = url.find(folder)
+        if idx != -1:
+            return url[idx + 1:]  # без ведущего слеша -> 'images/...' | 'files/...'
+    return None
+
+
+def delete_object(key: str) -> None:
+    """Удаляет объект из бакета по ключу. Бросает S3NotConfigured / ошибки boto3."""
+    if not key:
+        return
+    client = _client()
+    client.delete_object(Bucket=current_app.config['S3_BUCKET'], Key=key)
 
 
 def upload_file(data: bytes, filename: str) -> str:

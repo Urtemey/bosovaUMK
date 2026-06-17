@@ -12,8 +12,10 @@ class Config:
     JWT_ACCESS_TOKEN_EXPIRES = 3600  # 1 hour
     JWT_REFRESH_TOKEN_EXPIRES = 2592000  # 30 days
 
-    # Лимит размера запроса (загрузка изображений). По умолчанию 8 МБ.
-    MAX_CONTENT_LENGTH = int(os.getenv('MAX_UPLOAD_BYTES', 8 * 1024 * 1024))
+    # Лимит размера запроса. По умолчанию 100 МБ — чтобы можно было массово
+    # импортировать тесты пачкой файлов/архивов через веб (см. dashboard/import).
+    # Переопределяется env MAX_UPLOAD_BYTES.
+    MAX_CONTENT_LENGTH = int(os.getenv('MAX_UPLOAD_BYTES', 100 * 1024 * 1024))
 
     # S3-совместимое хранилище (timeweb). Ключи задаются в .env на сервере.
     S3_ENDPOINT_URL = os.getenv('S3_ENDPOINT_URL', 'https://s3.twcstorage.ru')
@@ -21,6 +23,8 @@ class Config:
     S3_BUCKET = os.getenv('S3_BUCKET')
     S3_ACCESS_KEY = os.getenv('S3_ACCESS_KEY')
     S3_SECRET_KEY = os.getenv('S3_SECRET_KEY')
-    # Базовый публичный URL для ссылок в БД. Если не задан — собирается
-    # из endpoint + bucket (https://s3.twcstorage.ru/<bucket>).
+    # Корень бакета для публичных ссылок: URL объекта = {base}/{key},
+    # где key несёт папку (images/… или files/…). Задавать БЕЗ /images,
+    # например https://s3.twcstorage.ru/<bucket>. Если не задан — собирается
+    # из endpoint + bucket. (Значение с /images на конце терпится: срезается.)
     S3_IMAGES_BASE_URL = os.getenv('S3_IMAGES_BASE_URL')
