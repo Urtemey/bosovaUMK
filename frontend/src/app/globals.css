@@ -1114,6 +1114,34 @@ input[type="radio"]:hover:not(:checked):not(:disabled) {
   border-top: 5px solid var(--color-accent);
 }
 
+/* Подразделы внутри класса (БУ/УУ/ВПР/ОГЭ/ЕГЭ) */
+.section-pill-btn {
+  height: 2rem;
+  padding: 0 0.875rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  border: 1.5px solid var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.section-pill-btn:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+.section-pill-btn.active {
+  background: var(--color-accent);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 3px 12px var(--color-accent-glow);
+}
+
 
 /* ═══════════════════════════════════════════════════════════════
    TEST CARDS

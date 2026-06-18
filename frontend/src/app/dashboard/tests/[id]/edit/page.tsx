@@ -19,6 +19,7 @@ import NumberPairs from '@/components/questions/NumberPairs';
 import FreeForm from '@/components/questions/FreeForm';
 import ImageUpload from '@/components/ui/ImageUpload';
 import FileUpload, { type FileAttachment } from '@/components/ui/FileUpload';
+import { GRADES, gradeLabel, gradeSections, SECTION_LABELS, SECTION_FULL } from '@/lib/sections';
 
 const RichTextEditor = dynamic(() => import('@/components/editor/RichTextEditor'), { ssr: false });
 
@@ -37,6 +38,7 @@ interface Test {
   id: number;
   title: string;
   grade: number;
+  section?: string | null;
   topic: string;
   description: string;
   question_count: number;
@@ -1500,6 +1502,7 @@ export default function EditTestPage() {
   const [editingInfo, setEditingInfo] = useState(false);
   const [infoTitle, setInfoTitle] = useState('');
   const [infoGrade, setInfoGrade] = useState(5);
+  const [infoSection, setInfoSection] = useState<string>('');
   const [infoTopic, setInfoTopic] = useState('');
   const [infoDescription, setInfoDescription] = useState('');
   const [infoPublished, setInfoPublished] = useState(false);
@@ -1518,6 +1521,7 @@ export default function EditTestPage() {
       setTest(data);
       setInfoTitle(data.title);
       setInfoGrade(data.grade);
+      setInfoSection(data.section || '');
       setInfoTopic(data.topic || '');
       setInfoDescription(data.description || '');
       setInfoPublished(data.is_published);
@@ -1576,6 +1580,7 @@ export default function EditTestPage() {
       await testsApi.update(token!, testId, {
         title: infoTitle.trim(),
         grade: infoGrade,
+        section: infoSection || null,
         topic: infoTopic.trim() || undefined,
         description: infoDescription.trim() || undefined,
         is_published: infoPublished,
@@ -1756,12 +1761,23 @@ export default function EditTestPage() {
             <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
               <div>
                 <label className="label">Класс</label>
-                <select className="input" value={infoGrade} onChange={(e) => setInfoGrade(Number(e.target.value))} style={{ width: 'auto', paddingRight: '2rem' }}>
-                  {[5, 6, 7, 8, 9, 10, 11].map(g => (
-                    <option key={g} value={g}>{g} класс</option>
+                <select className="input" value={infoGrade} onChange={(e) => { setInfoGrade(Number(e.target.value)); setInfoSection(''); }} style={{ width: 'auto', paddingRight: '2rem' }}>
+                  {GRADES.map(g => (
+                    <option key={g} value={g}>{gradeLabel(g)}</option>
                   ))}
                 </select>
               </div>
+              {gradeSections(infoGrade).length > 0 && (
+                <div>
+                  <label className="label">Подраздел</label>
+                  <select className="input" value={infoSection} onChange={(e) => setInfoSection(e.target.value)} style={{ width: 'auto', paddingRight: '2rem' }}>
+                    <option value="">— не выбран —</option>
+                    {gradeSections(infoGrade).map(s => (
+                      <option key={s} value={s}>{SECTION_FULL[s] || SECTION_LABELS[s]}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div style={{ flex: 1 }}>
                 <label className="label">Тема</label>
                 <input type="text" className="input" value={infoTopic} onChange={(e) => setInfoTopic(e.target.value)} placeholder="Необязательно" />

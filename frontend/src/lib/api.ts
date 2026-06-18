@@ -116,6 +116,12 @@ export const testsApi = {
       body: JSON.stringify({ test_ids: testIds, delete_s3_images: deleteS3Images }),
       token,
     }),
+  setSection: (token: string, testIds: number[], section: string | null) =>
+    apiFetch('/tests/set-section', {
+      method: 'POST',
+      body: JSON.stringify({ test_ids: testIds, section }),
+      token,
+    }),
 };
 
 // Questions (browse)

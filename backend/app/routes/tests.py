@@ -1,7 +1,9 @@
+import re
+
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt, verify_jwt_in_request
 from app import db
-from app.models.test import Test
+from app.models.test import Test, normalize_section, SECTIONS_BY_GRADE
 from app.models.question import Question, QuestionType
 from app.models.answer import Answer
 from app.models.attempt import TestAttempt
@@ -88,6 +90,7 @@ def create_test():
     test = Test(
         title=title,
         grade=grade,
+        section=normalize_section(grade, data.get('section')),
         topic=data.get('topic', '').strip() or None,
         description=data.get('description', '').strip() or None,
         created_by=teacher_id,
@@ -120,6 +123,12 @@ def update_test(test_id):
         test.settings = data['settings']
     if 'is_published' in data:
         test.is_published = data['is_published']
+    # Подраздел приводим к допустимому для текущего класса. Если класс сменили
+    # без явного section — сбрасываем недопустимый старый подраздел.
+    if 'section' in data:
+        test.section = normalize_section(test.grade, data['section'])
+    elif 'grade' in data:
+        test.section = normalize_section(test.grade, test.section)
 
     db.session.commit()
     return jsonify(test.to_dict())
@@ -486,11 +495,12 @@ def _upload_provided_images(image_files, image_paths):
     return uploaded, failed, error
 
 
-def _create_test_with_questions(title, grade, topic, teacher_id, parsed_questions):
+def _create_test_with_questions(title, grade, topic, teacher_id, parsed_questions, section=None):
     """Создаёт черновик теста и его вопросы. Без commit."""
     test = Test(
         title=title,
         grade=grade,
+        section=normalize_section(grade, section),
         topic=topic or None,
         created_by=teacher_id,
         settings={},
@@ -548,6 +558,7 @@ def import_files():
 
     grade = int(request.form.get('grade', 9))
     topic = request.form.get('topic', '')
+    section = request.form.get('section') or None
     explicit_title = request.form.get('title', '').strip()
 
     # картинки, переданные вручную (для HTML)
@@ -592,7 +603,7 @@ def import_files():
                     results.append({'filename': name, 'ok': False, 'error': 'Вопросы не найдены в архиве'})
                     continue
                 zip_title = title if explicit_title and len(files) == 1 else (parsed.get('title') or title)
-                test = _create_test_with_questions(zip_title, grade, topic, teacher_id, questions)
+                test = _create_test_with_questions(zip_title, grade, topic, teacher_id, questions, section)
                 db.session.commit()
                 total_tests += 1
                 total_questions += len(questions)
@@ -613,7 +624,7 @@ def import_files():
                 if not questions:
                     results.append({'filename': name, 'ok': False, 'error': 'Вопросы не найдены в файле'})
                     continue
-                test = _create_test_with_questions(title, grade, topic, teacher_id, questions)
+                test = _create_test_with_questions(title, grade, topic, teacher_id, questions, section)
                 db.session.commit()
                 total_tests += 1
                 total_questions += len(questions)
@@ -659,6 +670,41 @@ def _s3_keys_in_content(content):
         if k:
             keys.add(k)
     return keys
+
+
+@tests_bp.route('/set-section', methods=['POST'])
+@jwt_required()
+def set_section_bulk():
+    """Массово перемещает тесты в подраздел (БУ/УУ/ВПР/ОГЭ/ЕГЭ).
+
+    Body: { "test_ids": [int, ...], "section": str|null }
+    section=null/'' — убрать подраздел. Тесты, чей класс не допускает указанный
+    подраздел, пропускаются (skipped).
+    """
+    teacher_id, error = require_role('admin')
+    if error:
+        return error
+
+    data = request.get_json() or {}
+    test_ids = data.get('test_ids')
+    section = data.get('section') or None
+
+    if not isinstance(test_ids, list) or not test_ids:
+        return jsonify({'error': 'test_ids (непустой список) обязателен'}), 400
+
+    tests = Test.query.filter(Test.id.in_(test_ids), Test.created_by == teacher_id).all()
+    updated = skipped = 0
+    for t in tests:
+        if section is None:
+            t.section = None
+            updated += 1
+        elif section in SECTIONS_BY_GRADE.get(t.grade, ()):
+            t.section = section
+            updated += 1
+        else:
+            skipped += 1
+    db.session.commit()
+    return jsonify({'updated': updated, 'skipped': skipped})
 
 
 @tests_bp.route('/bulk-delete', methods=['POST'])

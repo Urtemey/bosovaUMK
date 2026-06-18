@@ -6,17 +6,17 @@ import { useAuth } from '@/lib/auth';
 import { testsApi } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import SplitTestModal from '@/components/tests/SplitTestModal';
+import { GRADES, SPO_GRADE, gradeSections, gradeLabel, SECTION_LABELS } from '@/lib/sections';
 
 interface Test {
   id: number;
   title: string;
   grade: number;
   topic: string;
+  section?: string | null;
   question_count: number;
   is_published: boolean;
 }
-
-const GRADES = [5, 6, 7, 8, 9, 10, 11];
 
 const GRADE_BG: Record<number, string> = {
   5: '#edf2f9',
@@ -26,6 +26,7 @@ const GRADE_BG: Record<number, string> = {
   9: '#edf9f3',
   10: '#fdf0f2',
   11: '#f5eef8',
+  [SPO_GRADE]: '#eef1f4',
 };
 
 const GRADE_COLOR: Record<number, string> = {
@@ -36,6 +37,7 @@ const GRADE_COLOR: Record<number, string> = {
   9: '#2b9e6b',
   10: '#c44b5c',
   11: '#9b45b5',
+  [SPO_GRADE]: '#5a6b7a',
 };
 
 function pluralQuestions(n: number) {
@@ -183,7 +185,10 @@ function DashboardTestCard({
 
       <div className="test-card-body">
         <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
-          <span className="pill-tag pill-tag-blue">{test.grade} класс</span>
+          <span className="pill-tag pill-tag-blue">{gradeLabel(test.grade)}</span>
+          {test.section && (
+            <span className="pill-tag pill-tag-muted">{SECTION_LABELS[test.section] || test.section}</span>
+          )}
           <span className={`pill-tag ${test.is_published ? 'pill-tag-green' : 'pill-tag-muted'}`}>
             {test.is_published ? 'Опубликован' : 'Черновик'}
           </span>
@@ -275,6 +280,8 @@ export default function DashboardPage() {
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [deleteS3, setDeleteS3] = useState(false);
+  const [sectionOpen, setSectionOpen] = useState(false);
+  const [settingSection, setSettingSection] = useState(false);
 
   const toggleSelect = (id: number) =>
     setSelectedIds((prev) => {
@@ -298,6 +305,45 @@ export default function DashboardPage() {
     setSelectedIds(new Set());
     setBulkOpen(false);
     setDeleteS3(false);
+    setSectionOpen(false);
+  };
+
+  // Подразделы, доступные для всех выбранных тестов (пересечение по классам).
+  // Если выбраны тесты разных классов — общими будут только БУ/УУ.
+  const selectedTests = tests.filter((t) => selectedIds.has(t.id));
+  const availableSections = (() => {
+    const lists = selectedTests.map((t) => gradeSections(t.grade)).filter((l) => l.length > 0);
+    if (lists.length === 0) return [];
+    return lists.reduce((acc, l) => acc.filter((s) => l.includes(s)));
+  })();
+
+  const handleSetSection = async (section: string | null) => {
+    if (!token || settingSection || selectedIds.size === 0) return;
+    setSettingSection(true);
+    try {
+      const ids = Array.from(selectedIds);
+      const res = (await testsApi.setSection(token, ids, section)) as { updated: number; skipped: number };
+      const idSet = new Set(ids);
+      setTests((prev) =>
+        prev.map((t) =>
+          idSet.has(t.id) && (section === null || gradeSections(t.grade).includes(section))
+            ? { ...t, section }
+            : t,
+        ),
+      );
+      setSectionOpen(false);
+      const label = section === null ? 'Без раздела' : SECTION_LABELS[section] || section;
+      window.alert(
+        `Перемещено в «${label}»: ${res.updated}` +
+          (res.skipped ? `\nПропущено (раздел недоступен для класса): ${res.skipped}` : ''),
+      );
+      exitSelectMode();
+    } catch (e) {
+      console.error(e);
+      window.alert('Не удалось переместить тесты в раздел.');
+    } finally {
+      setSettingSection(false);
+    }
   };
 
   const handleBulkDelete = async () => {
@@ -474,6 +520,14 @@ export default function DashboardPage() {
                 <>
                   <button
                     type="button"
+                    className="btn btn-sm btn-secondary"
+                    disabled={selectedIds.size === 0}
+                    onClick={() => setSectionOpen(true)}
+                  >
+                    В раздел ({selectedIds.size})
+                  </button>
+                  <button
+                    type="button"
                     className="btn btn-sm btn-danger"
                     disabled={selectedIds.size === 0}
                     onClick={() => setBulkOpen(true)}
@@ -545,7 +599,7 @@ export default function DashboardPage() {
                     <div className="section-header animate-fade-up">
                       <span className="section-bar" style={{ background: GRADE_COLOR[Number(grade)] ?? 'var(--color-accent)' }} />
                       <h3 style={{ fontSize: '1.0625rem', fontWeight: 800, color: 'var(--color-text-primary)' }}>
-                        {grade} класс
+                        {gradeLabel(Number(grade))}
                       </h3>
                       <span className="t-caption">
                         {gradeTests.length}{' '}
@@ -659,6 +713,65 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {sectionOpen && (
+        <div
+          onClick={() => !settingSection && setSectionOpen(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(20,24,30,0.45)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="card-lg"
+            style={{ width: '100%', maxWidth: '26rem', padding: '1.5rem', background: 'var(--color-surface)' }}
+          >
+            <h2 className="t-subtitle" style={{ marginBottom: '0.5rem' }}>
+              Переместить в раздел ({selectedIds.size})
+            </h2>
+            <p className="t-caption" style={{ marginBottom: '1rem' }}>
+              Выбранные тесты будут отнесены к указанному подразделу. Доступны
+              только подразделы, общие для классов выбранных тестов.
+            </p>
+
+            {availableSections.length === 0 ? (
+              <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', marginBottom: '1rem' }}>
+                Для выбранных классов нет подразделов. Можно только убрать раздел.
+              </p>
+            ) : (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
+                {availableSections.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    className="btn btn-secondary"
+                    disabled={settingSection}
+                    onClick={() => handleSetSection(s)}
+                    style={{ minWidth: '4.5rem', flex: '1 0 auto' }}
+                  >
+                    {SECTION_LABELS[s] || s}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'space-between' }}>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                disabled={settingSection}
+                onClick={() => handleSetSection(null)}
+              >
+                Убрать раздел
+              </button>
+              <button type="button" className="btn btn-secondary btn-sm" disabled={settingSection} onClick={() => setSectionOpen(false)}>
+                Отмена
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {moveTest && (
         <div
           onClick={() => setMoveTest(null)}
@@ -675,7 +788,7 @@ export default function DashboardPage() {
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', marginBottom: '1rem' }}>
               <div>
                 <h2 className="t-subtitle" style={{ marginBottom: '0.25rem' }}>Перенести в класс</h2>
-                <p className="t-caption">«{moveTest.title}» · сейчас {moveTest.grade} класс</p>
+                <p className="t-caption">«{moveTest.title}» · сейчас {gradeLabel(moveTest.grade)}</p>
               </div>
               <button type="button" className="btn btn-ghost btn-sm" onClick={() => setMoveTest(null)} aria-label="Закрыть">&times;</button>
             </div>
@@ -688,7 +801,7 @@ export default function DashboardPage() {
                   onClick={() => handleMoveTest(moveTest, g)}
                   style={{ minWidth: '5rem', flex: '1 0 auto' }}
                 >
-                  {g} класс
+                  {gradeLabel(g)}
                 </button>
               ))}
             </div>

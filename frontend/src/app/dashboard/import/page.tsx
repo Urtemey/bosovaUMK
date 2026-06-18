@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { testsApi } from '@/lib/api';
 import Link from 'next/link';
+import { GRADES, gradeLabel, gradeSections, SECTION_LABELS, SECTION_FULL } from '@/lib/sections';
 
 const IMPORT_EXT = /\.(html?|zip)$/i;
 
@@ -35,6 +36,7 @@ export default function ImportPage() {
 
   const [mounted, setMounted] = useState(false);
   const [grade, setGrade] = useState(5);
+  const [section, setSection] = useState<string>('');
   const [topic, setTopic] = useState('');
   const [title, setTitle] = useState('');
   const [files, setFiles] = useState<File[]>([]);
@@ -77,6 +79,7 @@ export default function ImportPage() {
       const formData = new FormData();
       for (const f of files) formData.append('files', f);
       formData.append('grade', String(grade));
+      if (section) formData.append('section', section);
       if (topic) formData.append('topic', topic);
       if (files.length === 1 && title) formData.append('title', title);
 
@@ -191,12 +194,23 @@ export default function ImportPage() {
           <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem' }}>
             <div style={{ flex: '0 0 8rem' }}>
               <label className="label" style={{ display: 'block', marginBottom: '0.375rem' }}>Класс</label>
-              <select className="input" value={grade} onChange={(e) => setGrade(Number(e.target.value))}>
-                {[5, 6, 7, 8, 9, 10, 11].map((g) => (
-                  <option key={g} value={g}>{g} класс</option>
+              <select className="input" value={grade} onChange={(e) => { setGrade(Number(e.target.value)); setSection(''); }}>
+                {GRADES.map((g) => (
+                  <option key={g} value={g}>{gradeLabel(g)}</option>
                 ))}
               </select>
             </div>
+            {gradeSections(grade).length > 0 && (
+              <div style={{ flex: '0 0 10rem' }}>
+                <label className="label" style={{ display: 'block', marginBottom: '0.375rem' }}>Подраздел</label>
+                <select className="input" value={section} onChange={(e) => setSection(e.target.value)}>
+                  <option value="">— не выбран —</option>
+                  {gradeSections(grade).map((s) => (
+                    <option key={s} value={s}>{SECTION_FULL[s] || SECTION_LABELS[s]}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div style={{ flex: 1 }}>
               <label className="label" style={{ display: 'block', marginBottom: '0.375rem' }}>Тема (необязательно)</label>
               <input type="text" className="input" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Применится ко всем" />

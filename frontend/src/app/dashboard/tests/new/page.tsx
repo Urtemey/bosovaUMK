@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
 import { testsApi } from '@/lib/api';
 import { useRouter } from 'next/navigation';
+import { GRADES, gradeLabel, gradeSections, SECTION_LABELS, SECTION_FULL } from '@/lib/sections';
 
 export default function NewTestPage() {
   const { token, role, isLoading: authLoading } = useAuth();
@@ -12,6 +13,7 @@ export default function NewTestPage() {
   const [mounted, setMounted] = useState(false);
   const [title, setTitle] = useState('');
   const [grade, setGrade] = useState(5);
+  const [section, setSection] = useState<string>('');
   const [topic, setTopic] = useState('');
   const [description, setDescription] = useState('');
   const [isPublished, setIsPublished] = useState(false);
@@ -47,6 +49,7 @@ export default function NewTestPage() {
       const res = await testsApi.create(token!, {
         title: title.trim(),
         grade,
+        section: section || null,
         topic: topic.trim() || undefined,
         description: description.trim() || undefined,
         settings,
@@ -94,20 +97,39 @@ export default function NewTestPage() {
               />
             </div>
 
-            {/* Grade */}
-            <div>
-              <label className="label" htmlFor="testGrade">Класс *</label>
-              <select
-                id="testGrade"
-                value={grade}
-                onChange={(e) => setGrade(Number(e.target.value))}
-                className="input"
-                style={{ width: 'auto', paddingRight: '2rem' }}
-              >
-                {[5, 6, 7, 8, 9, 10, 11].map(g => (
-                  <option key={g} value={g}>{g} класс</option>
-                ))}
-              </select>
+            {/* Grade + section */}
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+              <div>
+                <label className="label" htmlFor="testGrade">Класс *</label>
+                <select
+                  id="testGrade"
+                  value={grade}
+                  onChange={(e) => { setGrade(Number(e.target.value)); setSection(''); }}
+                  className="input"
+                  style={{ width: 'auto', paddingRight: '2rem' }}
+                >
+                  {GRADES.map(g => (
+                    <option key={g} value={g}>{gradeLabel(g)}</option>
+                  ))}
+                </select>
+              </div>
+              {gradeSections(grade).length > 0 && (
+                <div>
+                  <label className="label" htmlFor="testSection">Подраздел</label>
+                  <select
+                    id="testSection"
+                    value={section}
+                    onChange={(e) => setSection(e.target.value)}
+                    className="input"
+                    style={{ width: 'auto', paddingRight: '2rem' }}
+                  >
+                    <option value="">— не выбран —</option>
+                    {gradeSections(grade).map(s => (
+                      <option key={s} value={s}>{SECTION_FULL[s] || SECTION_LABELS[s]}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
             {/* Topic */}

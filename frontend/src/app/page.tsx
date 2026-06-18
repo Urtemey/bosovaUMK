@@ -4,19 +4,16 @@ import { Fragment, useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { testsApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { GRADES, SPO_GRADE, gradeSections, gradeLabel, gradePillLabel, SECTION_LABELS, SECTION_FULL } from '@/lib/sections';
 
 interface Test {
   id: number;
   title: string;
   grade: number;
   topic: string;
+  section?: string | null;
   question_count: number;
 }
-
-const GRADES = [5, 6, 7, 8, 9, 10, 11];
-
-const EXAM_CATALOG_RE = /(vpr|oge|ege|\u0432\u043f\u0440|\u043e\u0433\u044d|\u0435\u0433\u044d|\u043f\u043e\u0434\u0433\u043e\u0442\u043e\u0432\u043a\u0430)/i;
-
 
 const GRADE_BG: Record<number, string> = {
   5: '#edf2f9',
@@ -26,6 +23,7 @@ const GRADE_BG: Record<number, string> = {
   9: '#edf9f3',
   10: '#fdf0f2',
   11: '#f5eef8',
+  [SPO_GRADE]: '#eef1f4',
 };
 
 const GRADE_COLOR: Record<number, string> = {
@@ -36,6 +34,7 @@ const GRADE_COLOR: Record<number, string> = {
   9: '#2b9e6b',
   10: '#c44b5c',
   11: '#9b45b5',
+  [SPO_GRADE]: '#5a6b7a',
 };
 
 
@@ -133,7 +132,7 @@ function TestCard({
             lineHeight: 1,
           }}
         >
-          {test.grade} класс
+          {gradeLabel(test.grade)}
         </span>
       </div>
 
@@ -199,10 +198,13 @@ function SkeletonCard() {
 export default function HomePage() {
   const [testsByGrade, setTestsByGrade] = useState<Record<number, Test[]>>({});
   const [selectedGrade, setSelectedGrade] = useState<number>(5);
+  const [selectedSection, setSelectedSection] = useState<string | null>(null);
   const [assignClassroom, setAssignClassroom] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const { user, role, token } = useAuth();
-  const canReorder = role === 'admin' && !assignClassroom;
+  // Перетаскивание для смены порядка работает только в полном списке класса
+  // (когда не выбран подраздел) — иначе индексы не совпадут с сохранением.
+  const canReorder = role === 'admin' && !assignClassroom && selectedSection === null;
 
   const cardRefs = useRef<Map<number, HTMLElement>>(new Map());
   const dragRef = useRef<{
@@ -369,11 +371,8 @@ export default function HomePage() {
     async function load() {
       try {
         const all = (await testsApi.list()) as Test[];
-        const visibleTests = role === 'student'
-          ? all.filter((test) => EXAM_CATALOG_RE.test(`${test.title} ${test.topic || ''}`))
-          : all;
         const grouped: Record<number, Test[]> = {};
-        for (const t of visibleTests) {
+        for (const t of all) {
           if (!grouped[t.grade]) grouped[t.grade] = [];
           grouped[t.grade].push(t);
         }
@@ -387,8 +386,17 @@ export default function HomePage() {
     load();
   }, [role]);
 
-  const tests = testsByGrade[selectedGrade] || [];
+  const gradeTests = testsByGrade[selectedGrade] || [];
+  const sections = gradeSections(selectedGrade);
+  const tests = selectedSection
+    ? gradeTests.filter((t) => t.section === selectedSection)
+    : gradeTests;
   const gradeColor = GRADE_COLOR[selectedGrade] ?? '#2b4c7e';
+
+  const selectGrade = (g: number) => {
+    setSelectedGrade(g);
+    setSelectedSection(null);
+  };
 
   return (
     <>
@@ -510,14 +518,44 @@ export default function HomePage() {
                 key={g}
                 type="button"
                 className={`grade-pill-btn ${selectedGrade === g ? 'active' : ''}`}
-                onClick={() => setSelectedGrade(g)}
+                onClick={() => selectGrade(g)}
                 aria-pressed={selectedGrade === g}
-                title={`${g} класс`}
+                title={gradeLabel(g)}
+                style={g === SPO_GRADE ? { width: 'auto', paddingLeft: '1rem', paddingRight: '1rem' } : undefined}
               >
-                {g}
+                {gradePillLabel(g)}
               </button>
             ))}
           </div>
+
+          {/* Section sub-filter pills */}
+          {sections.length > 0 && (
+            <div
+              className="animate-fade-up stagger-2"
+              style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '-1.25rem', marginBottom: '2rem' }}
+            >
+              <button
+                type="button"
+                className={`section-pill-btn ${selectedSection === null ? 'active' : ''}`}
+                onClick={() => setSelectedSection(null)}
+                aria-pressed={selectedSection === null}
+              >
+                Все
+              </button>
+              {sections.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  className={`section-pill-btn ${selectedSection === s ? 'active' : ''}`}
+                  onClick={() => setSelectedSection(s)}
+                  aria-pressed={selectedSection === s}
+                  title={SECTION_FULL[s] || SECTION_LABELS[s]}
+                >
+                  {SECTION_LABELS[s] || s}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Grade heading */}
           <div
@@ -525,7 +563,8 @@ export default function HomePage() {
           >
             <span className="section-bar" style={{ background: gradeColor }} />
             <span style={{ fontWeight: 800, fontSize: '1.0625rem', color: 'var(--color-text-primary)' }}>
-              {selectedGrade} класс
+              {gradeLabel(selectedGrade)}
+              {selectedSection ? ` · ${SECTION_LABELS[selectedSection] || selectedSection}` : ''}
             </span>
             {!loading && (
               <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', marginLeft: 'auto' }}>
@@ -553,7 +592,9 @@ export default function HomePage() {
                 style={{ gridColumn: '1 / -1' }}
               >
                 <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9375rem' }}>
-                  Тестов для {selectedGrade} класса пока нет
+                  {selectedSection
+                    ? `В подразделе «${SECTION_LABELS[selectedSection] || selectedSection}» тестов пока нет`
+                    : `Тестов для «${gradeLabel(selectedGrade)}» пока нет`}
                 </p>
               </div>
             ) : (
