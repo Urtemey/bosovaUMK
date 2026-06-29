@@ -52,6 +52,7 @@ function DashboardTestCard({
   onDelete,
   onSplit,
   onMove,
+  onExport,
   deleting,
   moving,
   selectMode,
@@ -63,6 +64,7 @@ function DashboardTestCard({
   onDelete: (test: Test) => void;
   onSplit: (test: Test) => void;
   onMove: (test: Test) => void;
+  onExport: (test: Test) => void;
   deleting: boolean;
   moving: boolean;
   selectMode: boolean;
@@ -129,6 +131,21 @@ function DashboardTestCard({
 
         {!selectMode && (
         <div style={{ position: 'absolute', top: '0.625rem', right: '0.625rem', display: 'flex', gap: '0.25rem' }}>
+          {/* Скачать (HTML) */}
+          <button
+            type="button"
+            onClick={(e) => { stop(e); onExport(test); }}
+            aria-label={`Скачать тест «${test.title}»`}
+            title="Скачать в читаемом формате (HTML)"
+            className="test-card-action-btn"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <path d="M7 10l5 5 5-5" />
+              <path d="M12 15V3" />
+            </svg>
+          </button>
+
           {/* Перенести в класс */}
           <button
             type="button"
@@ -282,6 +299,7 @@ export default function DashboardPage() {
   const [deleteS3, setDeleteS3] = useState(false);
   const [sectionOpen, setSectionOpen] = useState(false);
   const [settingSection, setSettingSection] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const toggleSelect = (id: number) =>
     setSelectedIds((prev) => {
@@ -377,6 +395,35 @@ export default function DashboardPage() {
       setBulkDeleting(false);
     }
   };
+
+  const handleExportOne = async (test: Test) => {
+    if (!token || exporting) return;
+    setExporting(true);
+    try {
+      await testsApi.exportOne(token, test.id);
+    } catch (e) {
+      console.error(e);
+      window.alert('Не удалось выгрузить тест.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleExportBulk = async (ids: number[]) => {
+    if (!token || exporting || ids.length === 0) return;
+    setExporting(true);
+    try {
+      await testsApi.exportBulk(token, ids);
+    } catch (e) {
+      console.error(e);
+      window.alert('Не удалось выгрузить тесты.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const selectPublished = () =>
+    setSelectedIds(new Set(tests.filter((t) => t.is_published).map((t) => t.id)));
 
   const handleMoveTest = async (test: Test, grade: number) => {
     if (!token || movingId !== null) return;
@@ -520,6 +567,22 @@ export default function DashboardPage() {
                 <>
                   <button
                     type="button"
+                    className="btn btn-sm btn-ghost"
+                    onClick={selectPublished}
+                    title="Выбрать все опубликованные тесты"
+                  >
+                    Выбрать опубликованные
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-secondary"
+                    disabled={selectedIds.size === 0 || exporting}
+                    onClick={() => handleExportBulk(Array.from(selectedIds))}
+                  >
+                    {exporting ? 'Выгрузка…' : `Скачать (${selectedIds.size})`}
+                  </button>
+                  <button
+                    type="button"
                     className="btn btn-sm btn-secondary"
                     disabled={selectedIds.size === 0}
                     onClick={() => setSectionOpen(true)}
@@ -605,7 +668,7 @@ export default function DashboardPage() {
                         {gradeTests.length}{' '}
                         {gradeTests.length === 1 ? 'тест' : gradeTests.length < 5 ? 'теста' : 'тестов'}
                       </span>
-                      {selectMode && (
+                      {selectMode ? (
                         <button
                           type="button"
                           className="btn btn-sm btn-ghost"
@@ -613,6 +676,17 @@ export default function DashboardPage() {
                           onClick={() => toggleSelectGrade(gradeTests)}
                         >
                           {gradeTests.every((t) => selectedIds.has(t.id)) ? 'Снять класс' : 'Выбрать класс'}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-ghost"
+                          style={{ marginLeft: 'auto' }}
+                          disabled={exporting}
+                          onClick={() => handleExportBulk(gradeTests.map((t) => t.id))}
+                          title={`Скачать все тесты «${gradeLabel(Number(grade))}» одним файлом`}
+                        >
+                          Скачать класс
                         </button>
                       )}
                     </div>
@@ -626,6 +700,7 @@ export default function DashboardPage() {
                           onDelete={handleDeleteTest}
                           onSplit={setSplitTest}
                           onMove={setMoveTest}
+                          onExport={handleExportOne}
                           deleting={deletingId === test.id}
                           moving={movingId === test.id}
                           selectMode={selectMode}

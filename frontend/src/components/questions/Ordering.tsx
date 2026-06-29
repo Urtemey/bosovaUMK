@@ -5,7 +5,7 @@ import HtmlContent from '@/components/ui/HtmlContent';
 import AttachedFile from '@/components/ui/AttachedFile';
 
 interface Props {
-  content: { text: string; items: string[]; image?: string; file?: { url: string; name: string } };
+  content: { text: string; items: string[]; item_images?: string[]; image?: string; file?: { url: string; name: string } };
   value: unknown;
   onChange: (value: unknown) => void;
   disabled?: boolean;
@@ -88,7 +88,16 @@ export default function Ordering({ content, value, onChange, disabled }: Props) 
             <span className="flex-shrink-0 w-7 h-7 rounded-lg bg-gray-100 text-gray-500 flex items-center justify-center text-xs font-bold">
               {pos + 1}
             </span>
-            <span className="flex-1">{content.items[itemIdx]}</span>
+            <span className="flex-1" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+              {content.items[itemIdx]}
+              {content.item_images?.[itemIdx] && (
+                <img
+                  src={content.item_images[itemIdx]}
+                  alt=""
+                  style={{ display: 'block', maxWidth: '100%', maxHeight: 160, marginTop: content.items[itemIdx] ? '0.5rem' : 0, borderRadius: '0.5rem', border: '1px solid var(--color-border)' }}
+                />
+              )}
+            </span>
             {!disabled && (
               <div className="flex flex-col gap-0.5 flex-shrink-0">
                 <button

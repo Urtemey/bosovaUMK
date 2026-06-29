@@ -14,6 +14,7 @@ import Ordering from '@/components/questions/Ordering';
 import CodeEditor from '@/components/questions/CodeEditor';
 import NumberPairs from '@/components/questions/NumberPairs';
 import FreeForm from '@/components/questions/FreeForm';
+import ImageFields from '@/components/questions/ImageFields';
 import PythonPanel from '@/components/ui/PythonPanel';
 
 interface Question {
@@ -457,6 +458,7 @@ export default function AttemptPage() {
       case 'code':            return <CodeEditor {...props} />;
       case 'number_pairs':    return <NumberPairs {...props} />;
       case 'free_form':       return <FreeForm {...props} />;
+      case 'image_fields':    return <ImageFields {...props} />;
       default:
         return <p className="t-body">Неизвестный тип вопроса</p>;
     }

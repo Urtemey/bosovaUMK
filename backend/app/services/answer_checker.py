@@ -22,6 +22,7 @@ def check_answer(question_type, student_answer, correct_answer):
         QuestionType.CODE: _check_code,
         QuestionType.NUMBER_PAIRS: _check_number_pairs,
         QuestionType.FREE_FORM: _check_free_form,
+        QuestionType.IMAGE_FIELDS: _check_image_fields,
     }
 
     checker = checkers.get(question_type)
@@ -219,13 +220,41 @@ def _check_free_form(student, correct):
     for field_id, spec in correct.items():
         if not isinstance(spec, dict):
             return False
-        checker = field_checkers.get(spec.get('type'))
-        if checker is None:
-            return False
         student_value = student.get(field_id)
         if student_value is None:
+            return False
+        # Встроенный полноценный вопрос любого типа (matching/ordering/… и т.д.):
+        # делегируем проверку соответствующему чекеру по question_type.
+        if spec.get('type') == 'question':
+            if not check_answer(spec.get('question_type'), student_value, spec.get('value')):
+                return False
+            continue
+        checker = field_checkers.get(spec.get('type'))
+        if checker is None:
             return False
         if not checker(student_value, spec.get('value')):
             return False
 
+    return True
+
+
+def _check_image_fields(student, correct):
+    """Изображение с полями ввода (например, пустые клетки таблицы истинности).
+
+    Correct answer format: {"<field_id>": ["принимаемый ответ", ...], ...}
+    Student answer format:  {"<field_id>": "текст", ...}
+
+    Каждое поле сверяется без учёта регистра/пробелов (как text_input).
+    All-or-nothing: каждое поле должно быть верным.
+    """
+    if not isinstance(correct, dict) or not correct:
+        return False
+    if not isinstance(student, dict):
+        return False
+    for field_id, accepted in correct.items():
+        student_value = student.get(field_id)
+        if student_value is None:
+            return False
+        if not _check_text_input(student_value, accepted):
+            return False
     return True

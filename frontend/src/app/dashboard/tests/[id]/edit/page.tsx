@@ -17,6 +17,8 @@ import Ordering from '@/components/questions/Ordering';
 import CodeEditor from '@/components/questions/CodeEditor';
 import NumberPairs from '@/components/questions/NumberPairs';
 import FreeForm from '@/components/questions/FreeForm';
+import ImageFields from '@/components/questions/ImageFields';
+import ImageFieldsEditor, { type ImgField } from '@/components/questions/ImageFieldsEditor';
 import ImageUpload from '@/components/ui/ImageUpload';
 import FileUpload, { type FileAttachment } from '@/components/ui/FileUpload';
 import { GRADES, gradeLabel, gradeSections, SECTION_LABELS, SECTION_FULL } from '@/lib/sections';
@@ -47,7 +49,7 @@ interface Test {
   is_published: boolean;
 }
 
-type QuestionType = 'single_choice' | 'multiple_choice' | 'text_input' | 'matching' | 'drag_drop' | 'select_list' | 'ordering' | 'code' | 'number_pairs' | 'free_form';
+type QuestionType = 'single_choice' | 'multiple_choice' | 'text_input' | 'matching' | 'drag_drop' | 'select_list' | 'ordering' | 'code' | 'number_pairs' | 'free_form' | 'image_fields';
 
 const QUESTION_TYPE_LABELS: Record<string, string> = {
   single_choice: 'Одиночный выбор',
@@ -60,9 +62,10 @@ const QUESTION_TYPE_LABELS: Record<string, string> = {
   code: 'Код (программирование)',
   number_pairs: 'Пары чисел',
   free_form: 'Свободный формат',
+  image_fields: 'Изображение с полями',
 };
 
-const QUESTION_TYPES: QuestionType[] = ['single_choice', 'multiple_choice', 'text_input', 'matching', 'drag_drop', 'select_list', 'ordering', 'code', 'number_pairs', 'free_form'];
+const QUESTION_TYPES: QuestionType[] = ['single_choice', 'multiple_choice', 'text_input', 'matching', 'drag_drop', 'select_list', 'ordering', 'code', 'number_pairs', 'free_form', 'image_fields'];
 
 /* ─── Free-form blocks (editor side) ────────────────────────── */
 
@@ -83,7 +86,15 @@ interface FreeFieldBlock {
   correctMultiple: boolean[];
   acceptedAnswers: string[];
 }
-type FreeBlock = FreeHtmlBlock | FreeFieldBlock;
+// Встроенный полноценный вопрос любого типа (кроме free_form — нет рекурсии).
+interface FreeQuestionBlock {
+  type: 'question';
+  id: string;
+  question_type: QuestionType;
+  content: Record<string, unknown>;
+  correct_answer: unknown;
+}
+type FreeBlock = FreeHtmlBlock | FreeFieldBlock | FreeQuestionBlock;
 
 const FREE_FIELD_LABELS: Record<FreeFieldType, string> = {
   single_choice: 'Одиночный выбор',
@@ -109,6 +120,20 @@ function newFreeFieldBlock(fieldType: FreeFieldType): FreeFieldBlock {
     correctSingle: 0,
     correctMultiple: [false, false],
     acceptedAnswers: [''],
+  };
+}
+
+// Типы, которые можно встраивать в «свободный формат» (без free_form — рекурсия).
+const NESTABLE_TYPES: QuestionType[] = QUESTION_TYPES.filter((t) => t !== 'free_form');
+
+function newFreeQuestionBlock(): FreeQuestionBlock {
+  const p = buildPayload(emptyFormData('single_choice'))!;
+  return {
+    type: 'question',
+    id: makeFieldId(),
+    question_type: 'single_choice',
+    content: p.content,
+    correct_answer: p.correct_answer,
   };
 }
 
@@ -144,6 +169,7 @@ interface QuestionFormData {
   selectCorrect: Record<string, string>; // row_idx -> option_idx
   // ordering
   orderItems: string[];
+  orderImages: string[];
   // code
   codeLanguage: string;
   codeStarterCode: string;
@@ -154,6 +180,9 @@ interface QuestionFormData {
   pairsOrderedWithin: boolean;
   // free_form
   freeBlocks: FreeBlock[];
+  // image_fields
+  imgFields: ImgField[];
+  imgFieldAnswers: Record<string, string[]>;
 }
 
 function emptyFormData(type: QuestionType): QuestionFormData {
@@ -179,6 +208,7 @@ function emptyFormData(type: QuestionType): QuestionFormData {
     selectOptions: ['', ''],
     selectCorrect: { '0': '0', '1': '0' },
     orderItems: ['', '', ''],
+    orderImages: ['', '', ''],
     codeLanguage: 'python',
     codeStarterCode: '',
     codeTestCases: [{ input: '', expected_output: '' }],
@@ -186,6 +216,8 @@ function emptyFormData(type: QuestionType): QuestionFormData {
     pairsOrderedPairs: false,
     pairsOrderedWithin: true,
     freeBlocks: [],
+    imgFields: [],
+    imgFieldAnswers: {},
   };
 }
 
@@ -243,6 +275,7 @@ function formDataFromQuestion(q: Question): QuestionFormData {
     }
     case 'ordering': {
       fd.orderItems = (content.items as string[]) || ['', '', ''];
+      fd.orderImages = fd.orderItems.map((_, i) => (content.item_images as string[])?.[i] || '');
       break;
     }
     case 'code': {
@@ -265,8 +298,19 @@ function formDataFromQuestion(q: Question): QuestionFormData {
     }
     case 'free_form': {
       const rawBlocks = Array.isArray(content.blocks) ? (content.blocks as Record<string, unknown>[]) : [];
-      const correct = (q.correct_answer && typeof q.correct_answer === 'object' ? q.correct_answer : {}) as Record<string, { type?: string; value?: unknown }>;
+      const correct = (q.correct_answer && typeof q.correct_answer === 'object' ? q.correct_answer : {}) as Record<string, { type?: string; question_type?: string; value?: unknown }>;
       fd.freeBlocks = rawBlocks.map((b): FreeBlock => {
+        if (b.type === 'question') {
+          const id = String(b.id);
+          const spec = correct[id];
+          return {
+            type: 'question',
+            id,
+            question_type: (b.question_type as QuestionType) || 'single_choice',
+            content: (b.content && typeof b.content === 'object' ? b.content : {}) as Record<string, unknown>,
+            correct_answer: spec?.value,
+          };
+        }
         if (b.type === 'field') {
           const id = String(b.id);
           const fieldType = (b.field_type as FreeFieldType) || 'text';
@@ -295,6 +339,17 @@ function formDataFromQuestion(q: Question): QuestionFormData {
         }
         return { type: 'html', id: makeFieldId(), html: (b.html as string) || '' };
       });
+      break;
+    }
+    case 'image_fields': {
+      fd.imgFields = Array.isArray(content.fields) ? (content.fields as ImgField[]) : [];
+      const ca = (q.correct_answer && typeof q.correct_answer === 'object' ? q.correct_answer : {}) as Record<string, unknown>;
+      const answers: Record<string, string[]> = {};
+      fd.imgFields.forEach((f) => {
+        const v = ca[f.id];
+        answers[f.id] = Array.isArray(v) ? (v as unknown[]).map(String) : v != null ? [String(v)] : [''];
+      });
+      fd.imgFieldAnswers = answers;
       break;
     }
   }
@@ -361,7 +416,7 @@ function buildPayload(fd: QuestionFormData): { question_type: string; content: R
     case 'ordering':
       return {
         ...base,
-        content: { text: fd.text, items: fd.orderItems, ...img },
+        content: { text: fd.text, items: fd.orderItems, item_images: fd.orderImages, ...img },
         correct_answer: fd.orderItems.map((_, i) => i),
       };
     case 'code':
@@ -396,10 +451,16 @@ function buildPayload(fd: QuestionFormData): { question_type: string; content: R
     }
     case 'free_form': {
       const blocks: Record<string, unknown>[] = [];
-      const correct: Record<string, { type: string; value: unknown }> = {};
+      const correct: Record<string, { type: string; question_type?: string; value: unknown }> = {};
       fd.freeBlocks.forEach((b) => {
         if (b.type === 'html') {
           blocks.push({ type: 'html', html: b.html });
+          return;
+        }
+        if (b.type === 'question') {
+          // content без правильного ответа; ответ — в correct (self-describing).
+          blocks.push({ type: 'question', id: b.id, question_type: b.question_type, content: b.content });
+          correct[b.id] = { type: 'question', question_type: b.question_type, value: b.correct_answer };
           return;
         }
         const fieldBlock: Record<string, unknown> = {
@@ -433,6 +494,17 @@ function buildPayload(fd: QuestionFormData): { question_type: string; content: R
         correct_answer: correct,
       };
     }
+    case 'image_fields': {
+      const correct: Record<string, string[]> = {};
+      fd.imgFields.forEach((f) => {
+        correct[f.id] = (fd.imgFieldAnswers[f.id] || []).filter((a) => a.trim());
+      });
+      return {
+        ...base,
+        content: { text: fd.text, image: fd.image, fields: fd.imgFields, ...img },
+        correct_answer: correct,
+      };
+    }
   }
 }
 
@@ -456,6 +528,7 @@ function QuestionPreview({ fd }: { fd: QuestionFormData }) {
       {fd.question_type === 'code' && <CodeEditor {...previewProps} />}
       {fd.question_type === 'number_pairs' && <NumberPairs {...previewProps} />}
       {fd.question_type === 'free_form' && <FreeForm {...previewProps} />}
+      {fd.question_type === 'image_fields' && <ImageFields {...previewProps} />}
     </div>
   );
 }
@@ -466,15 +539,22 @@ function QuestionConstructor({
   onCancel,
   saving,
   token,
+  nested = false,
+  allowedTypes,
 }: {
   initial: QuestionFormData;
   onSave: (data: QuestionFormData) => void;
   onCancel: () => void;
   saving: boolean;
   token: string;
+  nested?: boolean;          // встроенный конструктор (внутри free_form)
+  allowedTypes?: QuestionType[]; // ограничение списка типов
 }) {
   const [fd, setFd] = useState<QuestionFormData>(initial);
   const [showPreview, setShowPreview] = useState(false);
+  // редактируемый встроенный вопрос (индекс блока free_form) либо null
+  const [editingQuestionBlock, setEditingQuestionBlock] = useState<number | null>(null);
+  const typeOptions = allowedTypes ?? QUESTION_TYPES;
 
   function update(patch: Partial<QuestionFormData>) {
     setFd(prev => ({ ...prev, ...patch }));
@@ -631,6 +711,10 @@ function QuestionConstructor({
   }
   function patchFreeBlock(i: number, patch: Partial<FreeFieldBlock> | Partial<FreeHtmlBlock>) {
     const arr = fd.freeBlocks.map((b, idx) => (idx === i ? { ...b, ...patch } as FreeBlock : b));
+    update({ freeBlocks: arr });
+  }
+  function patchFreeQuestionBlock(i: number, patch: Partial<FreeQuestionBlock>) {
+    const arr = fd.freeBlocks.map((b, idx) => (idx === i && b.type === 'question' ? { ...b, ...patch } : b));
     update({ freeBlocks: arr });
   }
   function addFreeFieldOption(i: number) {
@@ -1010,39 +1094,78 @@ function QuestionConstructor({
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
               <span className="label">Элементы (в правильном порядке)</span>
-              <button type="button" className="btn btn-ghost btn-sm" onClick={() => update({ orderItems: [...fd.orderItems, ''] })}>+ Добавить</button>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => update({ orderItems: [...fd.orderItems, ''], orderImages: [...fd.orderImages, ''] })}
+              >
+                + Добавить
+              </button>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {fd.orderItems.map((item, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ width: '1.5rem', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>{i + 1}</span>
-                  <input
-                    type="text"
-                    className="input"
-                    value={item}
-                    onChange={(e) => {
-                      const items = [...fd.orderItems];
-                      items[i] = e.target.value;
-                      update({ orderItems: items });
+                <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', padding: '0.625rem', border: '1px solid var(--color-border)', borderRadius: 8, background: 'var(--color-surface-2)' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                    <span style={{ width: '1.5rem', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.875rem', paddingTop: '0.5rem' }}>{i + 1}</span>
+                    <textarea
+                      className="input"
+                      value={item}
+                      rows={2}
+                      onChange={(e) => {
+                        const items = [...fd.orderItems];
+                        items[i] = e.target.value;
+                        update({ orderItems: items });
+                      }}
+                      onKeyDown={(e) => {
+                        // Tab вставляет символ табуляции (отступ), а не переходит по фокусу
+                        if (e.key === 'Tab' && !e.shiftKey) {
+                          e.preventDefault();
+                          const ta = e.currentTarget;
+                          const s = ta.selectionStart;
+                          const end = ta.selectionEnd;
+                          const next = item.slice(0, s) + '\t' + item.slice(end);
+                          const items = [...fd.orderItems];
+                          items[i] = next;
+                          update({ orderItems: items });
+                          requestAnimationFrame(() => {
+                            ta.selectionStart = ta.selectionEnd = s + 1;
+                          });
+                        }
+                      }}
+                      placeholder={`Элемент ${i + 1} (можно несколько строк, Tab — отступ)`}
+                      style={{ flex: 1, whiteSpace: 'pre', overflowWrap: 'normal', fontFamily: 'inherit', resize: 'vertical' }}
+                    />
+                    {fd.orderItems.length > 2 && (
+                      <button
+                        type="button"
+                        onClick={() => update({
+                          orderItems: fd.orderItems.filter((_, j) => j !== i),
+                          orderImages: fd.orderImages.filter((_, j) => j !== i),
+                        })}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-danger)', fontSize: '1.125rem', padding: '0.25rem', lineHeight: 1 }}
+                        title="Удалить"
+                      >
+                        &times;
+                      </button>
+                    )}
+                  </div>
+                  <ImageUpload
+                    compact
+                    value={fd.orderImages[i] || ''}
+                    onChange={(url) => {
+                      const arr = [...fd.orderImages];
+                      arr[i] = url;
+                      update({ orderImages: arr });
                     }}
-                    placeholder={`Элемент ${i + 1}`}
-                    style={{ flex: 1 }}
+                    token={token}
                   />
-                  {fd.orderItems.length > 2 && (
-                    <button
-                      type="button"
-                      onClick={() => update({ orderItems: fd.orderItems.filter((_, j) => j !== i) })}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-danger)', fontSize: '1.125rem', padding: '0.25rem', lineHeight: 1 }}
-                      title="Удалить"
-                    >
-                      &times;
-                    </button>
-                  )}
                 </div>
               ))}
             </div>
             <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '0.5rem' }}>
-              Введите элементы в правильном порядке. При прохождении теста они будут перемешаны.
+              Введите элементы в правильном порядке. Можно использовать несколько строк
+              и табуляцию (отступ), а также прикреплять изображения. При прохождении теста
+              элементы будут перемешаны.
             </p>
           </div>
         );
@@ -1228,7 +1351,11 @@ function QuestionConstructor({
                   {/* Block header */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem', gap: '0.5rem' }}>
                     <span className="t-caption" style={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      {block.type === 'html' ? 'Текст' : FREE_FIELD_LABELS[block.fieldType]}
+                      {block.type === 'html'
+                        ? 'Текст'
+                        : block.type === 'question'
+                          ? `Вопрос · ${QUESTION_TYPE_LABELS[block.question_type]}`
+                          : FREE_FIELD_LABELS[block.fieldType]}
                     </span>
                     <div style={{ display: 'flex', gap: '0.25rem' }}>
                       <button type="button" className="btn btn-ghost btn-sm" onClick={() => moveFreeBlock(i, -1)} disabled={i === 0} title="Вверх">↑</button>
@@ -1252,6 +1379,23 @@ function QuestionConstructor({
                       placeholder="Текст, изображение, формула..."
                       token={token ?? undefined}
                     />
+                  )}
+
+                  {/* Question block (встроенный вопрос любого типа) */}
+                  {block.type === 'question' && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <span className="t-caption" style={{ color: 'var(--color-text-muted)' }}>
+                        {QUESTION_TYPE_LABELS[block.question_type]} — настройте содержимое и ответ
+                      </span>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => setEditingQuestionBlock(i)}
+                        style={{ marginLeft: 'auto' }}
+                      >
+                        Редактировать вопрос
+                      </button>
+                    </div>
                   )}
 
                   {/* Field block */}
@@ -1376,13 +1520,69 @@ function QuestionConstructor({
               <button type="button" className="btn btn-secondary btn-sm" onClick={() => addFreeBlock(newFreeFieldBlock('number'))}>
                 + Число
               </button>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => { addFreeBlock(newFreeQuestionBlock()); setEditingQuestionBlock(fd.freeBlocks.length); }}>
+                + Вопрос (любой тип)
+              </button>
             </div>
             {fd.freeBlocks.length === 0 && (
               <p className="t-caption" style={{ marginTop: '0.5rem', color: 'var(--color-text-muted)' }}>
                 Добавьте хотя бы один блок с полем для ответа.
               </p>
             )}
+
+            {/* Модалка редактирования встроенного вопроса любого типа */}
+            {editingQuestionBlock !== null
+              && fd.freeBlocks[editingQuestionBlock]?.type === 'question' && (() => {
+                const qb = fd.freeBlocks[editingQuestionBlock] as FreeQuestionBlock;
+                return (
+                  <div
+                    style={{
+                      position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(20,24,30,0.5)',
+                      display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+                      padding: '1.5rem', overflowY: 'auto',
+                    }}
+                    onClick={() => setEditingQuestionBlock(null)}
+                  >
+                    <div style={{ width: '100%', maxWidth: '46rem' }} onClick={(e) => e.stopPropagation()}>
+                      <QuestionConstructor
+                        nested
+                        allowedTypes={NESTABLE_TYPES}
+                        token={token}
+                        saving={false}
+                        initial={formDataFromQuestion({
+                          id: 0,
+                          order: 0,
+                          question_type: qb.question_type,
+                          content: qb.content,
+                          correct_answer: qb.correct_answer,
+                          points: 1,
+                        })}
+                        onCancel={() => setEditingQuestionBlock(null)}
+                        onSave={(sub) => {
+                          const payload = buildPayload(sub)!;
+                          patchFreeQuestionBlock(editingQuestionBlock, {
+                            question_type: payload.question_type as QuestionType,
+                            content: payload.content,
+                            correct_answer: payload.correct_answer,
+                          });
+                          setEditingQuestionBlock(null);
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
           </div>
+        );
+
+      case 'image_fields':
+        return (
+          <ImageFieldsEditor
+            image={fd.image}
+            fields={fd.imgFields}
+            answers={fd.imgFieldAnswers}
+            onChange={(fields, answers) => update({ imgFields: fields, imgFieldAnswers: answers })}
+          />
         );
     }
   }
@@ -1390,6 +1590,11 @@ function QuestionConstructor({
   return (
     <div className="card-lg" style={{ padding: '1.25rem', marginBottom: '1.25rem' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        {nested && (
+          <p className="t-caption" style={{ fontWeight: 700, color: 'var(--color-accent)' }}>
+            Встроенный вопрос
+          </p>
+        )}
         {/* Type selector */}
         <div>
           <label className="label">Тип вопроса</label>
@@ -1398,7 +1603,7 @@ function QuestionConstructor({
             value={fd.question_type}
             onChange={(e) => handleTypeChange(e.target.value as QuestionType)}
           >
-            {QUESTION_TYPES.map(t => (
+            {typeOptions.map(t => (
               <option key={t} value={t}>{QUESTION_TYPE_LABELS[t]}</option>
             ))}
           </select>
@@ -1435,18 +1640,20 @@ function QuestionConstructor({
           />
         </div>
 
-        {/* Points */}
-        <div>
-          <label className="label">Баллы</label>
-          <input
-            type="number"
-            className="input"
-            value={fd.points}
-            onChange={(e) => update({ points: Math.max(1, Number(e.target.value)) })}
-            min={1}
-            style={{ width: '5rem' }}
-          />
-        </div>
+        {/* Points (во встроенном вопросе не нужны — проверка all-or-nothing) */}
+        {!nested && (
+          <div>
+            <label className="label">Баллы</label>
+            <input
+              type="number"
+              className="input"
+              value={fd.points}
+              onChange={(e) => update({ points: Math.max(1, Number(e.target.value)) })}
+              min={1}
+              style={{ width: '5rem' }}
+            />
+          </div>
+        )}
 
         {/* Type-specific fields */}
         {renderTypeFields()}
@@ -1460,7 +1667,7 @@ function QuestionConstructor({
           >
             {showPreview ? 'Скрыть предпросмотр' : 'Предпросмотр'}
           </button>
-          {showPreview && fd.text.trim() && <div style={{ marginTop: '0.75rem' }}><QuestionPreview fd={fd} /></div>}
+          {showPreview && (nested || fd.text.trim()) && <div style={{ marginTop: '0.75rem' }}><QuestionPreview fd={fd} /></div>}
         </div>
 
         {/* Actions */}
@@ -1472,7 +1679,9 @@ function QuestionConstructor({
             type="button"
             className="btn btn-primary btn-sm"
             onClick={() => onSave(fd)}
-            disabled={saving || !fd.text.trim() || (fd.question_type === 'free_form' && !fd.freeBlocks.some(b => b.type === 'field'))}
+            disabled={saving || (!nested && !fd.text.trim())
+              || (fd.question_type === 'free_form' && !fd.freeBlocks.some(b => b.type === 'field' || b.type === 'question'))
+              || (fd.question_type === 'image_fields' && (!fd.image || fd.imgFields.length === 0))}
           >
             {saving ? (
               <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>

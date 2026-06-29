@@ -4,6 +4,7 @@ import HtmlContent from '@/components/ui/HtmlContent';
 import AttachedFile from '@/components/ui/AttachedFile';
 import SingleChoice from '@/components/questions/SingleChoice';
 import MultipleChoice from '@/components/questions/MultipleChoice';
+import QuestionRenderer from '@/components/questions/QuestionRenderer';
 
 /* ─── Block types (rendering side) ───────────────────────────── */
 interface HtmlBlock {
@@ -17,7 +18,13 @@ interface FieldBlock {
   prompt?: string;
   options?: string[];
 }
-type Block = HtmlBlock | FieldBlock;
+interface QuestionBlock {
+  type: 'question';
+  id: string;
+  question_type: string;
+  content: Record<string, unknown>;
+}
+type Block = HtmlBlock | FieldBlock | QuestionBlock;
 
 interface Props {
   content: { text: string; image?: string; blocks?: Block[]; file?: { url: string; name: string } };
@@ -57,6 +64,21 @@ export default function FreeForm({ content, value, onChange, disabled }: Props) 
             return (
               <div key={i} style={{ color: 'var(--color-text-primary)', lineHeight: 1.6 }}>
                 <HtmlContent html={block.html} />
+              </div>
+            );
+          }
+
+          // встроенный полноценный вопрос любого типа
+          if (block.type === 'question') {
+            return (
+              <div key={block.id}>
+                <QuestionRenderer
+                  type={block.question_type}
+                  content={block.content}
+                  value={answers[block.id]}
+                  onChange={(v) => setField(block.id, v)}
+                  disabled={disabled}
+                />
               </div>
             );
           }

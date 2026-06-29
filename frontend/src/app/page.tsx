@@ -202,9 +202,11 @@ export default function HomePage() {
   const [assignClassroom, setAssignClassroom] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const { user, role, token } = useAuth();
-  // Перетаскивание для смены порядка работает только в полном списке класса
-  // (когда не выбран подраздел) — иначе индексы не совпадут с сохранением.
-  const canReorder = role === 'admin' && !assignClassroom && selectedSection === null;
+  // Перетаскивание для смены порядка доступно и в полном списке класса, и
+  // внутри подраздела. При активном подразделе переставляются только тесты
+  // этого подраздела (по своим «слотам»), остальные остаются на местах, а
+  // глобальный display_order класса пересобирается подстановкой.
+  const canReorder = role === 'admin' && !assignClassroom;
 
   const cardRefs = useRef<Map<number, HTMLElement>>(new Map());
   const dragRef = useRef<{
@@ -223,6 +225,21 @@ export default function HomePage() {
     | { testId: number; x: number; y: number; width: number; height: number }
     | null
   >(null);
+
+  // Видимый список (с учётом фильтра подраздела) из полного списка класса.
+  const visibleFrom = (full: Test[]) =>
+    selectedSection ? full.filter((t) => t.section === selectedSection) : full;
+
+  // Пересобирает полный список класса после перестановки видимого подмножества:
+  // на местах тестов подраздела появляются переставленные, прочие — без изменений.
+  const rebuildFull = (full: Test[], newVisible: Test[]) => {
+    if (!selectedSection) return newVisible;
+    const inSection = new Set(
+      full.filter((t) => t.section === selectedSection).map((t) => t.id),
+    );
+    let k = 0;
+    return full.map((t) => (inSection.has(t.id) ? newVisible[k++] : t));
+  };
 
   const persistOrder = async (grade: number, list: Test[]) => {
     if (!token) return;
@@ -295,7 +312,9 @@ export default function HomePage() {
       height: s.height,
     });
 
-    const list = testsByGrade[selectedGrade] || [];
+    const full = testsByGrade[selectedGrade] || [];
+    // Перетаскивание идёт по видимому подмножеству (с учётом фильтра подраздела).
+    const list = visibleFrom(full);
     const srcIdx = list.findIndex((t) => t.id === s.testId);
     if (srcIdx === -1) return;
 
@@ -323,10 +342,11 @@ export default function HomePage() {
       if (el) prevRects.set(id, el.getBoundingClientRect());
     });
 
-    const next = [...list];
-    const [moved] = next.splice(srcIdx, 1);
-    next.splice(targetIdx, 0, moved);
-    setTestsByGrade((prev) => ({ ...prev, [selectedGrade]: next }));
+    const nextVisible = [...list];
+    const [moved] = nextVisible.splice(srcIdx, 1);
+    nextVisible.splice(targetIdx, 0, moved);
+    const nextFull = rebuildFull(full, nextVisible);
+    setTestsByGrade((prev) => ({ ...prev, [selectedGrade]: nextFull }));
     animateShifts(prevRects);
   };
 

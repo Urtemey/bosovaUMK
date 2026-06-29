@@ -58,6 +58,61 @@ def list_my_tests():
     return jsonify([t.to_dict() for t in tests])
 
 
+def _export_response(tests):
+    """Собирает HTML-документ по тестам и отдаёт как файл для скачивания."""
+    from urllib.parse import quote
+    from flask import Response
+    from app.services.export_renderer import render_tests_html
+
+    origin = request.url_root.rstrip('/')
+    html = render_tests_html(tests, origin=origin)
+
+    if len(tests) == 1:
+        base = tests[0].title
+    else:
+        base = f'Тесты ({len(tests)})'
+    # имя файла: ascii-fallback + RFC 5987 для кириллицы
+    ascii_name = re.sub(r'[^A-Za-z0-9._-]+', '_', base).strip('_') or 'tests'
+    filename = f'{ascii_name}.html'
+    filename_star = quote(f'{base}.html')
+
+    resp = Response(html, mimetype='text/html; charset=utf-8')
+    resp.headers['Content-Disposition'] = (
+        f"attachment; filename=\"{filename}\"; filename*=UTF-8''{filename_star}"
+    )
+    return resp
+
+
+@tests_bp.route('/<int:test_id>/export', methods=['GET'])
+@jwt_required()
+def export_test(test_id):
+    teacher_id, error = require_role('admin')
+    if error:
+        return error
+    test = Test.query.filter_by(id=test_id, created_by=teacher_id).first_or_404()
+    return _export_response([test])
+
+
+@tests_bp.route('/export', methods=['POST'])
+@jwt_required()
+def export_tests_bulk():
+    """Массовый экспорт: { "test_ids": [int, ...] } -> один HTML-документ."""
+    teacher_id, error = require_role('admin')
+    if error:
+        return error
+    data = request.get_json() or {}
+    test_ids = data.get('test_ids')
+    if not isinstance(test_ids, list) or not test_ids:
+        return jsonify({'error': 'test_ids (непустой список) обязателен'}), 400
+
+    tests = Test.query.filter(
+        Test.id.in_(test_ids), Test.created_by == teacher_id
+    ).order_by(Test.grade, Test.display_order, Test.id).all()
+    if not tests:
+        return jsonify({'error': 'Тесты не найдены или нет доступа'}), 404
+    return _export_response(tests)
+
+
 @tests_bp.route('/<int:test_id>', methods=['GET'])
 def get_test(test_id):
     test = Test.query.get_or_404(test_id)

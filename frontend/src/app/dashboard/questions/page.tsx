@@ -16,6 +16,9 @@ const QUESTION_TYPES: Record<string, string> = {
   select_list: 'Выбор из списка',
   ordering: 'Упорядочивание',
   code: 'Код',
+  number_pairs: 'Пары чисел',
+  free_form: 'Свободный формат',
+  image_fields: 'Изображение с полями',
 };
 
 interface QuestionItem {

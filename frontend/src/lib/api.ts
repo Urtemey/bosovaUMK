@@ -122,7 +122,48 @@ export const testsApi = {
       body: JSON.stringify({ test_ids: testIds, section }),
       token,
     }),
+  exportOne: (token: string, id: number) =>
+    downloadHtml(`/tests/${id}/export`, { method: 'GET', token }),
+  exportBulk: (token: string, testIds: number[]) =>
+    downloadHtml('/tests/export', {
+      method: 'POST',
+      body: JSON.stringify({ test_ids: testIds }),
+      token,
+    }),
 };
+
+// Скачивание HTML-экспорта: получает blob и инициирует загрузку файла.
+async function downloadHtml(
+  path: string,
+  opts: { method: string; token: string; body?: string },
+) {
+  const headers: Record<string, string> = { Authorization: `Bearer ${opts.token}` };
+  if (opts.body) headers['Content-Type'] = 'application/json';
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: opts.method,
+    headers,
+    body: opts.body,
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ error: 'Ошибка сервера' }));
+    throw new Error(error.error || `HTTP ${res.status}`);
+  }
+  const blob = await res.blob();
+  const disposition = res.headers.get('Content-Disposition') || '';
+  let filename = 'tests.html';
+  const star = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+  const plain = disposition.match(/filename="([^"]+)"/i);
+  if (star) filename = decodeURIComponent(star[1]);
+  else if (plain) filename = plain[1];
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
 
 // Questions (browse)
 export const questionsApi = {
